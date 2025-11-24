@@ -1,7 +1,43 @@
-# Prerequisites
-*.d
+# ============================================
+# Visual Studio C++ Project .gitignore
+# 버전: 프로젝트 설정 파일 포함 (추천)
+# ============================================
 
-# Compiled Object files
+# ============================================
+# Visual Studio User 설정 (무시)
+# ============================================
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Visual Studio cache/options
+.vs/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# ============================================
+# 빌드 결과물 (무시)
+# ============================================
+
+# Object files
 *.slo
 *.lo
 *.o
@@ -11,16 +47,10 @@
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
+# Libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
@@ -30,3 +60,76 @@
 *.exe
 *.out
 *.app
+
+# Prerequisites
+*.d
+
+# ============================================
+# Visual Studio 임시 파일
+# ============================================
+
+# Visual C++ cache
+ipch/
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# ============================================
+# 기타 IDE
+# ============================================
+
+.vscode/
+*.code-workspace
+.idea/
+cmake-build-*/
+
+# ============================================
+# OS 파일
+# ============================================
+
+.DS_Store
+Thumbs.db
+*~
+*.tmp
+*.log
+*.swp
+
+# ============================================
+# 외부 라이브러리 빌드 파일
+# ============================================
+
+Libraries/*/bin/
+Libraries/*/lib/
+Libraries/*/.vs/
+Libraries/*/Debug/
+Libraries/*/Release/
+Libraries/*/x64/
+Libraries/*/x86/
+
+# ============================================
+# Git에 포함되는 파일들
+# ============================================
+# 
+# 자동으로 추적됨:
+# - *.cpp, *.h, *.hpp (소스 코드)
+# - *.vert, *.frag (셰이더)
+# - *.vcxproj, *.sln (프로젝트 설정)
+# - *.vcxproj.filters (폴더 구조)
+# - README.md, *.md (문서)
+#
+# 프로젝트 설정 파일 포함으로 팀원이 클론 후 바로 실행 가능!

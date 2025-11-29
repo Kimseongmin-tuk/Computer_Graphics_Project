@@ -9,6 +9,7 @@
 #include "RayCast.h"
 #include "Block.h"
 #include "BlockManager.h"
+#include "Player.h"
 
 // 전역 변수
 GLint width = 1280, height = 720;
@@ -29,6 +30,14 @@ float lastX = 640.0f;
 float lastY = 360.0f;
 bool firstMouse = true;
 
+// 카메라 모드 (1인칭/3인칭)
+enum class CameraMode {
+    FIRST_PERSON,
+    THIRD_PERSON
+};
+CameraMode cameraMode = CameraMode::THIRD_PERSON;
+float thirdPersonDistance = 5.0f;
+
 // 마우스 움직임 무시 플래그
 bool ignoreNextMouseMove = false;
 
@@ -39,6 +48,7 @@ float lastFrame = 0.0f;
 
 // 블록 매니저
 BlockManager* blockManager = nullptr;
+Player* player = nullptr;
 
 // 육면체 정점 데이터
 float cubeVertices[] = {
@@ -164,7 +174,7 @@ GLuint make_shaderProgram() {
     if (!result) {
         glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
         std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
-		return false;
+        return false;
     }
 
     glUseProgram(shaderID);
@@ -268,6 +278,42 @@ void renderCube(glm::vec3 position, glm::vec3 color) {
     glBindVertexArray(0);
 }
 
+// 직육면체 렌더링
+void renderBox(const glm::mat4& modelMatrix, const glm::vec3& color) {
+    GLint modelLoc = glGetUniformLocation(shaderProgramID, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+    GLint colorLoc = glGetUniformLocation(shaderProgramID, "blockColor");
+    glUniform3fv(colorLoc, 1, glm::value_ptr(color));
+
+    glBindVertexArray(cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+// 플레이어 렌더링 함수
+void renderPlayer() {
+    if (!player) return;
+    
+    // 머리
+    renderBox(player->getHeadTransform(), player->getHeadColor());
+    
+    // 몸통
+    renderBox(player->getBodyTransform(), player->getBodyColor());
+    
+    // 왼팔
+    renderBox(player->getLeftArmTransform(), player->getArmColor());
+    
+    // 오른팔
+    renderBox(player->getRightArmTransform(), player->getArmColor());
+    
+    // 왼다리
+    renderBox(player->getLeftLegTransform(), player->getLegColor());
+    
+    // 오른다리
+    renderBox(player->getRightLegTransform(), player->getLegColor());
+}
+  
 // drawCrosshair 함수 수정 (셰이더 프로그램 끄고 그리기)
 void drawCrosshair() {
     glDisable(GL_DEPTH_TEST);
@@ -292,6 +338,28 @@ void updateCamera() {
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(direction);
+    
+    // 플레이어 회전 업데이트
+    if (player) {
+        player->setYaw(yaw);
+        player->setPitch(pitch);
+    }
+    
+    // 카메라 위치 업데이트
+    if (player) {
+        glm::vec3 playerPos = player->getPosition();
+        
+        if (cameraMode == CameraMode::FIRST_PERSON) {
+            // 1인칭: 카메라를 플레이어 눈 위치로
+            cameraPos = playerPos;
+            cameraPos.y += 1.0f;  // 플레이어 눈높이
+        }
+        else if (cameraMode == CameraMode::THIRD_PERSON) {
+            // 3인칭: 카메라를 플레이어 뒤로
+            playerPos.y += 1.0f; // 플레이어 눈높이
+            cameraPos = playerPos - cameraFront * thirdPersonDistance;
+        }
+    }
 }
 
 // 키 입력 처리 함수 추가
@@ -301,29 +369,143 @@ void processInput() {
     lastFrame = currentFrame;
 
     float cameraSpeed = 5.0f * deltaTime;  // 초당 5 유닛
+    
+    bool isMoving = false;
+    glm::vec3 moveDirection(0.0f);
 
-    if (keyStates['w'] || keyStates['W']) {
-        cameraPos += cameraSpeed * cameraFront;
+    // 1인칭 모드: 플레이어 이동
+    if (cameraMode == CameraMode::FIRST_PERSON && player) {
+        // 카메라 방향을 바닥면(XZ 평면)으로 투영
+        glm::vec3 forward = cameraFront;
+        forward.y = 0.0f;
+        if (glm::length(forward) > 0.0f) {
+            forward = glm::normalize(forward);
+        }
+        
+        glm::vec3 right = glm::cross(forward, cameraUp);
+        if (glm::length(right) > 0.0f) {
+            right = glm::normalize(right);
+        }
+        
+        // WASD 입력 처리
+        if (keyStates['w'] || keyStates['W']) {
+            moveDirection += forward;
+            isMoving = true;
+        }
+        if (keyStates['s'] || keyStates['S']) {
+            moveDirection -= forward;
+            isMoving = true;
+        }
+        if (keyStates['a'] || keyStates['A']) {
+            moveDirection -= right;
+            isMoving = true;
+        }
+        if (keyStates['d'] || keyStates['D']) {
+            moveDirection += right;
+            isMoving = true;
+        }
+        
+        // 플레이어 이동
+        if (isMoving && glm::length(moveDirection) > 0.0f) {
+            moveDirection = glm::normalize(moveDirection);
+            glm::vec3 playerPos = player->getPosition();
+            
+            // Y 좌표는 유지하면서 XZ 평면에서만 이동
+            float currentY = playerPos.y;
+            playerPos += moveDirection * cameraSpeed;
+            playerPos.y = currentY;
+            
+            player->setPosition(playerPos);
+            player->setWalking(true);
+        }
+        else {
+            player->setWalking(false);
+        }
+        
+        // Space/C 키로 플레이어 상하 이동
+        if (keyStates[' ']) {
+            glm::vec3 playerPos = player->getPosition();
+            playerPos.y += cameraSpeed;
+            player->setPosition(playerPos);
+        }
+        if (keyStates['c'] || keyStates['C']) {
+            glm::vec3 playerPos = player->getPosition();
+            playerPos.y -= cameraSpeed;
+            player->setPosition(playerPos);
+        }
+        
+        // 플레이어 애니메이션 업데이트
+        player->updateAnimation(deltaTime);
     }
-    if (keyStates['s'] || keyStates['S']) {
-        cameraPos -= cameraSpeed * cameraFront;
-    }
-    if (keyStates['a'] || keyStates['A']) {
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    }
-    if (keyStates['d'] || keyStates['D']) {
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    }
-    if (keyStates[' ']) {
-        cameraPos += cameraSpeed * cameraUp;
-    }
-    if (keyStates['c'] || keyStates['C']) {  // C키로 아래로 이동
-        cameraPos -= cameraSpeed * cameraUp;
+    // 3인칭 모드: 플레이어 이동 (바닥면에서만)
+    else if (cameraMode == CameraMode::THIRD_PERSON && player) {
+        // 카메라 방향을 바닥면(XZ 평면)으로 투영
+        glm::vec3 forward = cameraFront;
+        forward.y = 0.0f;  // Y 성분 제거 (높이 무시)
+        if (glm::length(forward) > 0.0f) {
+            forward = glm::normalize(forward);
+        }
+        
+        glm::vec3 right = glm::cross(forward, cameraUp);
+        if (glm::length(right) > 0.0f) {
+            right = glm::normalize(right);
+        }
+        
+        // WASD 입력 처리
+        if (keyStates['w'] || keyStates['W']) {
+            moveDirection += forward;
+            isMoving = true;
+        }
+        if (keyStates['s'] || keyStates['S']) {
+            moveDirection -= forward;
+            isMoving = true;
+        }
+        if (keyStates['a'] || keyStates['A']) {
+            moveDirection -= right;
+            isMoving = true;
+        }
+        if (keyStates['d'] || keyStates['D']) {
+            moveDirection += right;
+            isMoving = true;
+        }
+        
+        // 플레이어 이동
+        if (isMoving && glm::length(moveDirection) > 0.0f) {
+            moveDirection = glm::normalize(moveDirection);
+            glm::vec3 playerPos = player->getPosition();
+            
+            // Y 좌표는 유지하면서 XZ 평면에서만 이동
+            float currentY = playerPos.y;
+            playerPos += moveDirection * cameraSpeed;
+            playerPos.y = currentY;  // Y 좌표 고정
+            
+            player->setPosition(playerPos);
+            player->setWalking(true);
+        }
+        else {
+            player->setWalking(false);
+        }
+        
+        // Space/C 키로 플레이어 상하 이동 (수동)
+        if (keyStates[' ']) {
+            glm::vec3 playerPos = player->getPosition();
+            playerPos.y += cameraSpeed;
+            player->setPosition(playerPos);
+        }
+        if (keyStates['c'] || keyStates['C']) {
+            glm::vec3 playerPos = player->getPosition();
+            playerPos.y -= cameraSpeed;
+            player->setPosition(playerPos);
+        }
+        
+        // 플레이어 애니메이션 업데이트
+        player->updateAnimation(deltaTime);
     }
 }
 
 void drawScene() {
     processInput();
+    updateCamera();  // 매 프레임 카메라 위치 업데이트
 
     glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -347,12 +529,18 @@ void drawScene() {
     GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos");
     glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
 
+    // 블록 렌더링
     for (const auto& pair : blockManager->getAllBlocks()) {
         const Block& block = pair.second;
         renderCube(block.getPosition(), block.getColor());
     }
+    
+    // 플레이어 렌더링
+    if (cameraMode == CameraMode::THIRD_PERSON) {
+        renderPlayer();
+    }
 
-    // 조준선 그리기 (새로 추가)
+    // 조준선 그리기
     drawCrosshair();
 
     glutSwapBuffers();
@@ -374,6 +562,18 @@ void KeyboardDown(unsigned char key, int x, int y) {
 
     if (key == 27) {  // ESC
         exit(0);
+    }
+    
+    // F 키로 카메라 모드 전환
+    if (key == 'f' || key == 'F') {
+        if (cameraMode == CameraMode::FIRST_PERSON) {
+            cameraMode = CameraMode::THIRD_PERSON;
+            std::cout << "3인칭 모드" << std::endl;
+        }
+        else {
+            cameraMode = CameraMode::FIRST_PERSON;
+            std::cout << "1인칭 모드" << std::endl;
+        }
     }
 }
 
@@ -417,17 +617,26 @@ void Mouse(int button, int state, int x, int y) {
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / height, 0.1f, 100.0f);
 
-        Ray ray = RayCast::screenToWorldRay(centerX, centerY, width, height, view, projection, cameraPos);
+        // 모든 모드에서 플레이어 눈 위치에서 레이 발사
+        glm::vec3 rayOrigin = cameraPos;
+        if (player) {
+            rayOrigin = player->getPosition();
+            rayOrigin.y += 1.0f;  // 플레이어 눈높이
+        }
+
+        Ray ray = RayCast::screenToWorldRay(centerX, centerY, width, height, view, projection, rayOrigin);
 
         RaycastHit hit;
         Block* hitBlock = nullptr;
 
         if (blockManager->raycastBlock(ray, hit, &hitBlock)) {
             if (button == GLUT_LEFT_BUTTON) {
+                // 좌클릭: 블록 추가 
                 glm::vec3 newPos = hitBlock->getPosition() - hit.normal * Constants::BLOCK_SIZE;
                 blockManager->addBlock(newPos);
             }
             else if (button == GLUT_RIGHT_BUTTON) {
+                // 우클릭: 블록 제거
                 blockManager->removeBlock(hitBlock->getPosition());
             }
         }
@@ -503,6 +712,9 @@ void main(int argc, char** argv) {
     crosshairShaderProgramID = make_crosshairShader();
 
     blockManager = new BlockManager();
+    
+    // 플레이어 초기화 (플랫폼 위에 배치)
+    player = new Player(glm::vec3(0.0f, 2.0f, 0.0f));
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);

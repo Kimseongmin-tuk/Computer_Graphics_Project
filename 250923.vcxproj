@@ -145,10 +145,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CAMERA_FOLLOW.md" />
+    <None Include="CODE_REFACTORING_DRY.md" />
     <None Include="FIRST_PERSON_ARMS.md" />
     <None Include="FIRST_PERSON_HAND.md" />
     <None Include="FIRST_PERSON_RAYCAST_FIX.md" />
     <None Include="fragment.glsl" />
+    <None Include="LEG_OVERLAP_FIX.md" />
     <None Include="MOVEMENT_FIX.md" />
     <None Include="PLAYER_FIX.md" />
     <None Include="PLAYER_ROTATION.md" />

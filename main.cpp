@@ -181,7 +181,7 @@ GLuint make_shaderProgram() {
     return shaderID;
 }
 
-// 조준선용 간단한 셰이더 생성 함수 추가
+// 조준선용 간단한 셰이더 생성 함수
 GLuint make_crosshairShader() {
     const char* vertexShaderSource = R"(
         #version 330 core
@@ -314,7 +314,7 @@ void renderPlayer() {
     renderBox(player->getRightLegTransform(), player->getLegColor());
 }
   
-// drawCrosshair 함수 수정 (셰이더 프로그램 끄고 그리기)
+// drawCrosshair 함수 
 void drawCrosshair() {
     glDisable(GL_DEPTH_TEST);
 
@@ -350,157 +350,91 @@ void updateCamera() {
         glm::vec3 playerPos = player->getPosition();
         
         if (cameraMode == CameraMode::FIRST_PERSON) {
-            // 1인칭: 카메라를 플레이어 눈 위치로
+            // 1인칭
             cameraPos = playerPos;
-            cameraPos.y += 1.0f;  // 플레이어 눈높이
+            cameraPos.y += 1.0f;  
         }
         else if (cameraMode == CameraMode::THIRD_PERSON) {
-            // 3인칭: 카메라를 플레이어 뒤로
-            playerPos.y += 1.0f; // 플레이어 눈높이
+            // 3인칭
+            playerPos.y += 1.0f; 
             cameraPos = playerPos - cameraFront * thirdPersonDistance;
         }
     }
 }
 
-// 키 입력 처리 함수 추가
+// 키 입력 처리 함수
 void processInput() {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
-    float cameraSpeed = 5.0f * deltaTime;  // 초당 5 유닛
+    float cameraSpeed = 5.0f * deltaTime;
+    
+    if (!player) return;  // 플레이어 없으면 리턴
     
     bool isMoving = false;
     glm::vec3 moveDirection(0.0f);
 
-    // 1인칭 모드: 플레이어 이동
-    if (cameraMode == CameraMode::FIRST_PERSON && player) {
-        // 카메라 방향을 바닥면(XZ 평면)으로 투영
-        glm::vec3 forward = cameraFront;
-        forward.y = 0.0f;
-        if (glm::length(forward) > 0.0f) {
-            forward = glm::normalize(forward);
-        }
-        
-        glm::vec3 right = glm::cross(forward, cameraUp);
-        if (glm::length(right) > 0.0f) {
-            right = glm::normalize(right);
-        }
-        
-        // WASD 입력 처리
-        if (keyStates['w'] || keyStates['W']) {
-            moveDirection += forward;
-            isMoving = true;
-        }
-        if (keyStates['s'] || keyStates['S']) {
-            moveDirection -= forward;
-            isMoving = true;
-        }
-        if (keyStates['a'] || keyStates['A']) {
-            moveDirection -= right;
-            isMoving = true;
-        }
-        if (keyStates['d'] || keyStates['D']) {
-            moveDirection += right;
-            isMoving = true;
-        }
-        
-        // 플레이어 이동
-        if (isMoving && glm::length(moveDirection) > 0.0f) {
-            moveDirection = glm::normalize(moveDirection);
-            glm::vec3 playerPos = player->getPosition();
-            
-            // Y 좌표는 유지하면서 XZ 평면에서만 이동
-            float currentY = playerPos.y;
-            playerPos += moveDirection * cameraSpeed;
-            playerPos.y = currentY;
-            
-            player->setPosition(playerPos);
-            player->setWalking(true);
-        }
-        else {
-            player->setWalking(false);
-        }
-        
-        // Space/C 키로 플레이어 상하 이동
-        if (keyStates[' ']) {
-            glm::vec3 playerPos = player->getPosition();
-            playerPos.y += cameraSpeed;
-            player->setPosition(playerPos);
-        }
-        if (keyStates['c'] || keyStates['C']) {
-            glm::vec3 playerPos = player->getPosition();
-            playerPos.y -= cameraSpeed;
-            player->setPosition(playerPos);
-        }
-        
-        // 플레이어 애니메이션 업데이트
-        player->updateAnimation(deltaTime);
+    
+    glm::vec3 forward = cameraFront;
+    forward.y = 0.0f;
+    if (glm::length(forward) > 0.0f) {
+        forward = glm::normalize(forward);
     }
-    // 3인칭 모드: 플레이어 이동 (바닥면에서만)
-    else if (cameraMode == CameraMode::THIRD_PERSON && player) {
-        // 카메라 방향을 바닥면(XZ 평면)으로 투영
-        glm::vec3 forward = cameraFront;
-        forward.y = 0.0f;  // Y 성분 제거 (높이 무시)
-        if (glm::length(forward) > 0.0f) {
-            forward = glm::normalize(forward);
-        }
-        
-        glm::vec3 right = glm::cross(forward, cameraUp);
-        if (glm::length(right) > 0.0f) {
-            right = glm::normalize(right);
-        }
-        
-        // WASD 입력 처리
-        if (keyStates['w'] || keyStates['W']) {
-            moveDirection += forward;
-            isMoving = true;
-        }
-        if (keyStates['s'] || keyStates['S']) {
-            moveDirection -= forward;
-            isMoving = true;
-        }
-        if (keyStates['a'] || keyStates['A']) {
-            moveDirection -= right;
-            isMoving = true;
-        }
-        if (keyStates['d'] || keyStates['D']) {
-            moveDirection += right;
-            isMoving = true;
-        }
-        
-        // 플레이어 이동
-        if (isMoving && glm::length(moveDirection) > 0.0f) {
-            moveDirection = glm::normalize(moveDirection);
-            glm::vec3 playerPos = player->getPosition();
-            
-            // Y 좌표는 유지하면서 XZ 평면에서만 이동
-            float currentY = playerPos.y;
-            playerPos += moveDirection * cameraSpeed;
-            playerPos.y = currentY;  // Y 좌표 고정
-            
-            player->setPosition(playerPos);
-            player->setWalking(true);
-        }
-        else {
-            player->setWalking(false);
-        }
-        
-        // Space/C 키로 플레이어 상하 이동 (수동)
-        if (keyStates[' ']) {
-            glm::vec3 playerPos = player->getPosition();
-            playerPos.y += cameraSpeed;
-            player->setPosition(playerPos);
-        }
-        if (keyStates['c'] || keyStates['C']) {
-            glm::vec3 playerPos = player->getPosition();
-            playerPos.y -= cameraSpeed;
-            player->setPosition(playerPos);
-        }
-        
-        // 플레이어 애니메이션 업데이트
-        player->updateAnimation(deltaTime);
+    
+    glm::vec3 right = glm::cross(forward, cameraUp);
+    if (glm::length(right) > 0.0f) {
+        right = glm::normalize(right);
     }
+    
+    // WASD 입력 처리
+    if (keyStates['w'] || keyStates['W']) {
+        moveDirection += forward;
+        isMoving = true;
+    }
+    if (keyStates['s'] || keyStates['S']) {
+        moveDirection -= forward;
+        isMoving = true;
+    }
+    if (keyStates['a'] || keyStates['A']) {
+        moveDirection -= right;
+        isMoving = true;
+    }
+    if (keyStates['d'] || keyStates['D']) {
+        moveDirection += right;
+        isMoving = true;
+    }
+    
+    // 플레이어 수평 이동
+    if (isMoving && glm::length(moveDirection) > 0.0f) {
+        moveDirection = glm::normalize(moveDirection);
+        glm::vec3 playerPos = player->getPosition();
+        
+        float currentY = playerPos.y;
+        playerPos += moveDirection * cameraSpeed;
+        playerPos.y = currentY;
+        
+        player->setPosition(playerPos);
+        player->setWalking(true);
+    }
+    else {
+        player->setWalking(false);
+    }
+    
+    // Space/C 키로 플레이어 상하 이동
+    if (keyStates[' ']) {
+        glm::vec3 playerPos = player->getPosition();
+        playerPos.y += cameraSpeed;
+        player->setPosition(playerPos);
+    }
+    if (keyStates['c'] || keyStates['C']) {
+        glm::vec3 playerPos = player->getPosition();
+        playerPos.y -= cameraSpeed;
+        player->setPosition(playerPos);
+    }
+    
+    // 플레이어 애니메이션 업데이트
+    player->updateAnimation(deltaTime);
 }
 
 void drawScene() {
@@ -718,11 +652,11 @@ void main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
-    glutKeyboardFunc(KeyboardDown);      // 수정
-    glutKeyboardUpFunc(KeyboardUp);      // 추가
+    glutKeyboardFunc(KeyboardDown);      
+    glutKeyboardUpFunc(KeyboardUp);      
     glutMouseFunc(Mouse);
     glutPassiveMotionFunc(PassiveMotion);
-    glutIdleFunc(Idle);                  // 추가
+    glutIdleFunc(Idle);                 
 
     glutMainLoop();
 }

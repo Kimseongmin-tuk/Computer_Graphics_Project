@@ -136,6 +136,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RayCast.cpp" />
+    <ClCompile Include="Shape.cpp" />
+    <ClCompile Include="ShapeManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Block.h" />
@@ -144,6 +146,8 @@
     <ClInclude Include="common.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RayCast.h" />
+    <ClInclude Include="Shape.h" />
+    <ClInclude Include="ShapeManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CAMERA_FOLLOW.md" />

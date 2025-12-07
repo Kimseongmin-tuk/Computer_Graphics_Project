@@ -49,6 +49,9 @@ public:
 
     bool raycastBlock(const Ray& ray, RaycastHit& hit, Block** hitBlock = nullptr);
 
+    // 충돌 감지 함수 추가
+    bool checkCollision(const AABB& playerAABB) const;
+
     int getBlockCount() const { return blocks.size(); }
     void clearAll() { blocks.clear(); }
 

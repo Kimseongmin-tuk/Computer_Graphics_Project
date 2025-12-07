@@ -102,3 +102,23 @@ bool BlockManager::raycastBlock(const Ray& ray, RaycastHit& hit, Block** hitBloc
 
     return foundHit;
 }
+
+// AABB 충돌 검사 헬퍼 함수
+static bool AABBIntersect(const AABB& a, const AABB& b) {
+    return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
+        (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
+        (a.min.z <= b.max.z && a.max.z >= b.min.z);
+}
+
+// 충돌 감지 함수 구현
+bool BlockManager::checkCollision(const AABB& playerAABB) const {
+    for (const auto& pair : blocks) {
+        const Block& block = pair.second;
+        AABB blockAABB = block.getAABB();
+
+        if (AABBIntersect(playerAABB, blockAABB)) {
+            return true;  // 충돌 발생
+        }
+    }
+    return false;  // 충돌 없음
+}

@@ -369,24 +369,23 @@ void processInput() {
     lastFrame = currentFrame;
 
     float cameraSpeed = 5.0f * deltaTime;
-    
-    if (!player) return;  // 플레이어 없으면 리턴
-    
+
+    if (!player) return;
+
     bool isMoving = false;
     glm::vec3 moveDirection(0.0f);
 
-    
     glm::vec3 forward = cameraFront;
     forward.y = 0.0f;
     if (glm::length(forward) > 0.0f) {
         forward = glm::normalize(forward);
     }
-    
+
     glm::vec3 right = glm::cross(forward, cameraUp);
     if (glm::length(right) > 0.0f) {
         right = glm::normalize(right);
     }
-    
+
     // WASD 입력 처리
     if (keyStates['w'] || keyStates['W']) {
         moveDirection += forward;
@@ -404,37 +403,71 @@ void processInput() {
         moveDirection += right;
         isMoving = true;
     }
-    
-    // 플레이어 수평 이동
+
+    // 플레이어 수평 이동 (충돌 체크 포함)
     if (isMoving && glm::length(moveDirection) > 0.0f) {
         moveDirection = glm::normalize(moveDirection);
         glm::vec3 playerPos = player->getPosition();
-        
+        glm::vec3 oldPos = playerPos;  // 이전 위치 저장
+
         float currentY = playerPos.y;
         playerPos += moveDirection * cameraSpeed;
         playerPos.y = currentY;
-        
+
+        // 임시로 새 위치 적용
         player->setPosition(playerPos);
-        player->setWalking(true);
+
+        // 충돌 체크
+        AABB playerAABB = player->getAABB();
+        if (blockManager->checkCollision(playerAABB)) {
+            // 충돌 발생 -> 이전 위치로 되돌림
+            player->setPosition(oldPos);
+            player->setWalking(false);
+        }
+        else {
+            // 충돌 없음 -> 이동 성공
+            player->setWalking(true);
+        }
     }
     else {
         player->setWalking(false);
     }
-    
-    // Space/C 키로 플레이어 상하 이동
+
+    // Space/C 키로 플레이어 상하 이동 (충돌 체크 포함)
     if (keyStates[' ']) {
         glm::vec3 playerPos = player->getPosition();
+        glm::vec3 oldPos = playerPos;  // 이전 위치 저장
+
         playerPos.y += cameraSpeed;
         player->setPosition(playerPos);
+
+        // 충돌 체크
+        AABB playerAABB = player->getAABB();
+        if (blockManager->checkCollision(playerAABB)) {
+            // 충돌 발생 -> 이전 위치로 되돌림
+            player->setPosition(oldPos);
+        }
     }
     if (keyStates['c'] || keyStates['C']) {
         glm::vec3 playerPos = player->getPosition();
+        glm::vec3 oldPos = playerPos;  // 이전 위치 저장
+
         playerPos.y -= cameraSpeed;
         player->setPosition(playerPos);
+
+        // 충돌 체크
+        AABB playerAABB = player->getAABB();
+        if (blockManager->checkCollision(playerAABB)) {
+            // 충돌 발생 -> 이전 위치로 되돌림
+            player->setPosition(oldPos);
+        }
     }
-    
+
     // 플레이어 애니메이션 업데이트
     player->updateAnimation(deltaTime);
+
+    // 카메라 업데이트
+    updateCamera();
 }
 
 void drawScene() {

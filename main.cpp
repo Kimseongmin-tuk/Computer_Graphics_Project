@@ -20,6 +20,8 @@ GLuint fragmentShader;
 GLuint cubeVAO, cubeVBO;
 GLuint crosshairVAO, crosshairVBO;
 GLuint crosshairShaderProgramID;
+GLuint quadVAO, quadVBO;
+GLuint uiShaderProgramID;
 
 // 카메라
 glm::vec3 cameraPos = glm::vec3(5.0f, 5.0f, 5.0f);
@@ -51,6 +53,12 @@ float lastFrame = 0.0f;
 BlockManager* blockManager = nullptr;
 Player* player = nullptr;
 ChallengeManager* challengeManager = nullptr;
+
+// 통계 정보
+int blocksPlaced = 0;
+int blocksDestroyed = 0;
+float totalPlayTime = 0.0f;
+bool showStats = false;
 
 // 게임 시작 여부
 bool gameStarted = false;
@@ -119,6 +127,7 @@ void renderText(const std::string& text, float x, float y);  // 텍스트 렌더링
 void renderChallengeUI();  // 챌린지 UI
 void renderPreview();  // 완성본 미리보기
 void selectGameMode();  // 게임 모드 선택
+void renderStatsUI();  // 통계 렌더링
 
 char* filetobuf(const char* file) {
     FILE* fptr;
@@ -272,6 +281,76 @@ void initCrosshair() {
     glBindVertexArray(0);
 }
 
+// UI 쿼드 초기화
+void initQuad() {
+    float quadVertices[] = {
+        // 위치 (x, y)
+        -1.0f,  1.0f,
+        -1.0f, -1.0f,
+         1.0f, -1.0f,
+        -1.0f,  1.0f,
+         1.0f, -1.0f,
+         1.0f,  1.0f
+    };
+
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+}
+
+// UI 셰이더 생성
+GLuint make_uiShader() {
+    const char* vertexShaderSource = R"(
+        #version 330 core
+        layout (location = 0) in vec2 aPos;
+        uniform vec2 position;
+        uniform vec2 size;
+        uniform vec2 screenSize;
+        void main()
+        {
+            vec2 pos = (aPos * size + position) / screenSize * 2.0 - 1.0;
+            pos.y = -pos.y;
+            gl_Position = vec4(pos, 0.0, 1.0);
+        }
+    )";
+
+    const char* fragmentShaderSource = R"(
+        #version 330 core
+        out vec4 FragColor;
+        uniform vec4 color;
+        void main()
+        {
+            FragColor = color;
+        }
+    )";
+
+    GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertShader);
+
+    GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragShader);
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertShader);
+    glAttachShader(program, fragShader);
+    glLinkProgram(program);
+
+    glDeleteShader(vertShader);
+    glDeleteShader(fragShader);
+
+    return program;
+}
+
 void renderCube(glm::vec3 position, glm::vec3 color) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -364,6 +443,60 @@ void renderText(const std::string& text, float x, float y) {
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_DEPTH_TEST);
 }
+
+// 통계 UI 렌더링
+void renderStatsUI() {
+    if (!showStats) return;
+
+    // 반투명 검은 배경
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glUseProgram(uiShaderProgramID);
+
+    GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
+    GLint sizeLoc = glGetUniformLocation(uiShaderProgramID, "size");
+    GLint screenSizeLoc = glGetUniformLocation(uiShaderProgramID, "screenSize");
+    GLint colorLoc = glGetUniformLocation(uiShaderProgramID, "color");
+
+    glUniform2f(posLoc, (float)width / 2, (float)height / 2);
+    glUniform2f(sizeLoc, 200.0f, 150.0f);
+    glUniform2f(screenSizeLoc, (float)width, (float)height);
+    glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 0.7f);
+
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glUseProgram(shaderProgramID);
+
+    // 통계 텍스트 표시
+    std::string title = "=== STATISTICS ===";
+    renderText(title, width / 2 - 80, height / 2 + 100);
+
+    int minutes = (int)(totalPlayTime / 60.0f);
+    int seconds = (int)totalPlayTime % 60;
+    std::string timeText = "Play Time: " + std::to_string(minutes) + "m " + std::to_string(seconds) + "s";
+    renderText(timeText, width / 2 - 80, height / 2 + 50);
+
+    std::string placedText = "Blocks Placed: " + std::to_string(blocksPlaced);
+    renderText(placedText, width / 2 - 80, height / 2 + 20);
+
+    std::string destroyedText = "Blocks Destroyed: " + std::to_string(blocksDestroyed);
+    renderText(destroyedText, width / 2 - 80, height / 2 - 10);
+
+    int currentBlocks = blockManager->getBlockCount() - 25;
+    if (currentBlocks < 0) currentBlocks = 0;
+    std::string currentText = "Current Blocks: " + std::to_string(currentBlocks);
+    renderText(currentText, width / 2 - 80, height / 2 - 40);
+
+    std::string closeText = "Press Q to close";
+    renderText(closeText, width / 2 - 80, height / 2 - 100);
+}
+
 
 // 챌린지 UI 렌더링
 void renderChallengeUI() {
@@ -514,6 +647,11 @@ void processInput() {
     lastFrame = currentFrame;
 
     float cameraSpeed = 5.0f * deltaTime;
+
+    // 플레이 타임 업데이트 (통계 창이 열려있지 않을 때)
+    if (!showStats && challengeManager && challengeManager->getMode() == GameMode::FREE_BUILD) {
+        totalPlayTime += deltaTime;
+    }
 
     if (!player) return;
 
@@ -669,11 +807,16 @@ void drawScene() {
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(mainView));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    // 크로스헤어 그리기
-    drawCrosshair();
+	// 통계창이 열려있지 않을 때만 크로스헤어 렌더링
+    if (!showStats) {
+        drawCrosshair();
+    }
 
     // 챌린지 UI 렌더링
     renderChallengeUI();
+
+    // 통계 UI 렌더링
+    renderStatsUI();
 
     glutSwapBuffers();
 }
@@ -705,6 +848,17 @@ void KeyboardDown(unsigned char key, int x, int y) {
         else {
             cameraMode = CameraMode::FIRST_PERSON;
             std::cout << "1인칭 모드" << std::endl;
+        }
+    }
+
+    // Q 키로 통계 창 토글 (자유 빌드모드가 아닐 때)
+    if ((key == 'q' || key == 'Q') && challengeManager && challengeManager->getMode() == GameMode::FREE_BUILD) {
+        showStats = !showStats;
+        if (showStats) {
+            std::cout << "Statistics displayed" << std::endl;
+        }
+        else {
+            std::cout << "Statistics hidden" << std::endl;
         }
     }
 }
@@ -740,6 +894,10 @@ void Mouse(int button, int state, int x, int y) {
                 glm::vec3 newPos = hitBlock->getPosition() - hit.normal * Constants::BLOCK_SIZE;
                 bool added = blockManager->addBlock(newPos);
 
+                if (added) {
+                    blocksPlaced++;
+                }
+
                 // 챌린지 모드에서 블록 색상 설정
                 if (added && challengeManager && challengeManager->isChallengeMode()) {
                     GridPosition gridPos(newPos);
@@ -758,7 +916,11 @@ void Mouse(int button, int state, int x, int y) {
             }
             else if (button == GLUT_RIGHT_BUTTON) {
                 // 우클릭: 블록 제거
-                blockManager->removeBlock(hitBlock->getPosition());
+                bool removed = blockManager->removeBlock(hitBlock->getPosition());
+
+                if (removed) {
+                    blocksDestroyed++;
+                }
             }
         }
     }
@@ -831,6 +993,9 @@ void main(int argc, char** argv) {
     initCube();
     initCrosshair();
     crosshairShaderProgramID = make_crosshairShader();
+    initQuad();
+    uiShaderProgramID = make_uiShader();
+
 
     blockManager = new BlockManager();
 

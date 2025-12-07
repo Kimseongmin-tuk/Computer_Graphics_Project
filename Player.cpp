@@ -19,44 +19,43 @@ Player::Player(const glm::vec3& pos)
 }
 
 AABB Player::getAABB() const {
-    // 캐릭터의 정확한 충돌 박스 - 마진 없이 완전히 정확하게
+    // 작은 여유 공간을 넣어 충돌 과민 반응을 방지
+    float margin = 0.02f;   // 2cm 정도의 마진
 
-    // 1. 각 부위의 실제 Y 위치 계산
-    // 다리: position.y를 중심으로 위아래로 size.leg.y/2 만큼
-    float legBottom = position.y - size.leg.y * 0.5f;  // 발 끝
-    float legTop = position.y + size.leg.y * 0.5f;     // 골반
+    // 1. 각 부위 Y 위치 계산
+    float legBottom = position.y - size.leg.y * 0.5f;
+    float legTop = position.y + size.leg.y * 0.5f;
 
-    // 몸통: 다리 위에서 시작
     float bodyBottom = legTop;
     float bodyTop = bodyBottom + size.body.y;
 
-    // 머리: 몸통 위에서 시작
     float headBottom = bodyTop;
     float headTop = headBottom + size.head.y;
 
-    // 2. 충돌 박스 Y 범위 (마진 없음)
-    float minY = legBottom;   // 발 끝
-    float maxY = headTop;     // 머리 끝
+    // 2. 충돌 박스 Y 범위 (여유 공간 추가)
+    float minY = legBottom + margin;     // 다리 바닥 약간 위로
+    float maxY = headTop - margin;       // 머리는 약간 아래로
 
-    // 3. 너비와 깊이 (마진 없음)
-    float width = std::max(size.head.x, size.body.x);  // 0.5
-    float depth = width;  // 회전 고려하여 정사각형
+    // 3. 너비·깊이
+    float width = std::max(size.head.x, size.body.x);
+    float depth = width;
 
-    // 4. AABB 생성 (완전히 정확하게)
+    // 4. AABB 생성 (좌우·앞뒤에도 마진 적용)
     glm::vec3 aabbMin(
-        position.x - width * 0.5f,
+        position.x - width * 0.5f + margin,
         minY,
-        position.z - depth * 0.5f
+        position.z - depth * 0.5f + margin
     );
 
     glm::vec3 aabbMax(
-        position.x + width * 0.5f,
+        position.x + width * 0.5f - margin,
         maxY,
-        position.z + depth * 0.5f
+        position.z + depth * 0.5f - margin
     );
 
     return AABB(aabbMin, aabbMax);
 }
+
 
 float Player::getTotalHeight() const {
     // 머리 + 몸통 + 다리

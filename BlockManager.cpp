@@ -1,4 +1,5 @@
 #include "BlockManager.h"
+#include <ctime>
 
 GridPosition::GridPosition(const glm::vec3& worldPos) {
     x = static_cast<int>(std::round(worldPos.x / Constants::BLOCK_SIZE));
@@ -15,24 +16,20 @@ glm::vec3 GridPosition::toWorldPosition() const {
 }
 
 BlockManager::BlockManager() : selectedBlockType(BlockType::CUBE) {
-    for (int x = -2; x <= 2; x++) {
-        for (int z = -2; z <= 2; z++) {
-            addBlock(GridPosition(x, 0, z));
-        }
-    }
+    generateRandomTerrain();
 }
 
-bool BlockManager::addBlock(const glm::vec3& worldPos, BlockType type) {
-    return addBlock(GridPosition(worldPos), type);
+bool BlockManager::addBlock(const glm::vec3& worldPos, BlockType type, const glm::vec3& upDirection) {
+    return addBlock(GridPosition(worldPos), type, upDirection);
 }
 
-bool BlockManager::addBlock(const GridPosition& gridPos, BlockType type) {
+bool BlockManager::addBlock(const GridPosition& gridPos, BlockType type, const glm::vec3& upDirection) {
     if (hasBlockAt(gridPos)) {
         return false;
     }
 
     glm::vec3 worldPos = gridPos.toWorldPosition();
-    Block newBlock(worldPos, Constants::BLOCK_SIZE, type);
+    Block newBlock(worldPos, Constants::BLOCK_SIZE, type, upDirection);
 
     blocks.insert({ gridPos, newBlock });
 
@@ -103,22 +100,52 @@ bool BlockManager::raycastBlock(const Ray& ray, RaycastHit& hit, Block** hitBloc
     return foundHit;
 }
 
-// AABB 충돌 검사 헬퍼 함수
 static bool AABBIntersect(const AABB& a, const AABB& b) {
     return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
         (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
         (a.min.z <= b.max.z && a.max.z >= b.min.z);
 }
 
-// 충돌 감지 함수 구현
 bool BlockManager::checkCollision(const AABB& playerAABB) const {
     for (const auto& pair : blocks) {
         const Block& block = pair.second;
         AABB blockAABB = block.getAABB();
 
         if (AABBIntersect(playerAABB, blockAABB)) {
-            return true;  // 충돌 발생
+            return true;
         }
     }
-    return false;  // 충돌 없음
+    return false;
+}
+
+void BlockManager::generateRandomTerrain() {
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    int terrainSize = 10;
+    int maxHeight = 3;
+
+    for (int x = -terrainSize; x <= terrainSize; x++) {
+        for (int z = -terrainSize; z <= terrainSize; z++) {
+            float noise = (sin(x * 0.3f) + cos(z * 0.3f)) * 0.5f + 0.5f;
+            noise += (rand() % 100) / 200.0f;
+            noise = glm::clamp(noise, 0.0f, 1.0f);
+            int height = static_cast<int>(noise * maxHeight) + 1;
+
+            for (int y = -1; y < height; y++) {
+                addBlock(GridPosition(x, y, z));
+            }
+        }
+    }
+}
+
+void BlockManager::generateFlatTerrain() {
+    // 5x5 평면 지형 (챌린지 모드용)
+    int terrainSize = 2;
+
+    for (int x = -terrainSize; x <= terrainSize; x++) {
+        for (int z = -terrainSize; z <= terrainSize; z++) {
+            // y=0에만 블록 생성 (평면)
+            addBlock(GridPosition(x, 0, z));
+        }
+    }
 }

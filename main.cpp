@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS 
+ï»¿#define _CRT_SECURE_NO_WARNINGS 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -15,7 +15,7 @@
 #include "Player.h"
 #include "ChallengeManager.h"
 
-// Àü¿ª º¯¼ö
+// ì „ì—­ ë³€ìˆ˜
 GLint width = 1280, height = 720;
 GLuint shaderProgramID;
 GLuint vertexShader;
@@ -24,14 +24,14 @@ GLuint cubeVAO, cubeVBO;
 GLuint crosshairVAO, crosshairVBO;
 GLuint crosshairShaderProgramID;
 
-// ÅØ½ºÃ³
+// í…ìŠ¤ì²˜
 GLuint dirtTexture;
 GLuint bricksTexture;
 GLuint cobblestoneTexture;
 GLuint mudblockTexture;
 GLuint quartzTexture;
 
-// ½ºÄ«ÀÌ¹Ú½º
+// ìŠ¤ì¹´ì´ë°•ìŠ¤
 GLuint skyboxVAO, skyboxVBO;
 GLuint skyboxTexture;
 GLuint skyboxShaderProgramID;
@@ -40,7 +40,7 @@ GLuint quadVAO, quadVBO;
 GLuint uiShaderProgramID;
 GLuint uiTextureShaderProgramID;  // UI
 
-// Ä«¸Ş¶ó
+// ì¹´ë©”ë¼
 glm::vec3 cameraPos = glm::vec3(5.0f, 5.0f, 5.0f);
 glm::vec3 cameraFront = glm::vec3(-1.0f, -1.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -50,7 +50,7 @@ float lastX = 640.0f;
 float lastY = 360.0f;
 bool firstMouse = true;
 
-// Ä«¸Ş¶ó ¸ğµå (1ÀÎÄª/3ÀÎÄª)
+// ì¹´ë©”ë¼ ëª¨ë“œ (1ì¸ì¹­/3ì¸ì¹­)
 enum class CameraMode {
     FIRST_PERSON,
     THIRD_PERSON
@@ -58,35 +58,35 @@ enum class CameraMode {
 CameraMode cameraMode = CameraMode::THIRD_PERSON;
 float thirdPersonDistance = 5.0f;
 
-// ¸¶¿ì½º ¿öÇÁ½Ã ¹ß»ı ÇÃ·¡±×
+// ë§ˆìš°ìŠ¤ ì›Œí”„ì‹œ ë°œìƒ í”Œë˜ê·¸
 bool ignoreNextMouseMove = false;
 
-// Å° »óÅÂ
+// í‚¤ ìƒíƒœ
 bool keyStates[256] = { false };
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// °ÔÀÓ ¸Å´ÏÀú
+// ê²Œì„ ë§¤ë‹ˆì €
 BlockManager* blockManager = nullptr;
 Player* player = nullptr;
 ChallengeManager* challengeManager = nullptr;
 
-// Åë°è Á¤º¸
+// í†µê³„ ì •ë³´
 int blocksPlaced = 0;
 int blocksDestroyed = 0;
 float totalPlayTime = 0.0f;
 bool showStats = false;
 
-// °ÔÀÓ ½ÃÀÛ ¿©ºÎ
-bool gameStarted = true;  // ÀÓ½Ã·Î true·Î ¼³Á¤ 
+// ê²Œì„ ì‹œì‘ ì—¬ë¶€
+bool gameStarted = true;  // ì„ì‹œë¡œ trueë¡œ ì„¤ì • 
 
-// ÇöÀç ¼±ÅÃµÈ ºí·Ï Å¸ÀÔ
+// í˜„ì¬ ì„ íƒëœ ë¸”ë¡ íƒ€ì…
 BlockType selectedBlockType = BlockType::DIRT;
 
-// Á¤À°¸éÃ¼ ¹öÅØ½º µ¥ÀÌÅÍ
-// À°¸éÃ¼ Á¤Á¡ µ¥ÀÌÅÍ (À§Ä¡, ¹ı¼±, UV)
+// ì •ìœ¡ë©´ì²´ ë²„í…ìŠ¤ ë°ì´í„°
+// ìœ¡ë©´ì²´ ì •ì  ë°ì´í„° (ìœ„ì¹˜, ë²•ì„ , UV)
 float cubeVertices[] = {
-    // ¾Õ¸é 
+    // ì•ë©´ 
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
      0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
@@ -94,7 +94,7 @@ float cubeVertices[] = {
     -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 
-    // µŞ¸é 
+    // ë’·ë©´ 
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
@@ -102,7 +102,7 @@ float cubeVertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
     -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
 
-    // ¿ŞÂÊ¸é
+    // ì™¼ìª½ë©´
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
     -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
     -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
@@ -110,7 +110,7 @@ float cubeVertices[] = {
     -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
 
-    // ¿À¸¥ÂÊ¸é 
+    // ì˜¤ë¥¸ìª½ë©´ 
      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
@@ -118,7 +118,7 @@ float cubeVertices[] = {
      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
      0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
 
-    // ¾Æ·¡¸é 
+    // ì•„ë˜ë©´ 
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
      0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
@@ -126,7 +126,7 @@ float cubeVertices[] = {
     -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
-    // À­¸é
+    // ìœ—ë©´
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
@@ -135,7 +135,7 @@ float cubeVertices[] = {
     -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 };
 
-// ½ºÄ«ÀÌ¹Ú½º ¹öÅØ½º µ¥ÀÌÅÍ 
+// ìŠ¤ì¹´ì´ë°•ìŠ¤ ë²„í…ìŠ¤ ë°ì´í„° 
 float skyboxVertices[] = {
     -1.0f,  1.0f, -1.0f,
     -1.0f, -1.0f, -1.0f,
@@ -180,7 +180,7 @@ float skyboxVertices[] = {
      1.0f, -1.0f,  1.0f
 };
 
-// ÅØ½ºÃ³ ·Îµù ÇÔ¼ö
+// í…ìŠ¤ì²˜ ë¡œë”© í•¨ìˆ˜
 GLuint loadTexture(const char* path) {
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -201,24 +201,24 @@ GLuint loadTexture(const char* path) {
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        // ÅØ½ºÃ³ ÇÊÅÍ¸µ ¼³Á¤ 
+        // í…ìŠ¤ì²˜ í•„í„°ë§ ì„¤ì • 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         stbi_image_free(data);
-        std::cout << "ÅØ½ºÃ³ ·Îµå ¼º°ø: " << path << std::endl;
+        std::cout << "í…ìŠ¤ì²˜ ë¡œë“œ ì„±ê³µ: " << path << std::endl;
     }
     else {
-        std::cerr << "ÅØ½ºÃ³ ·Îµå ½ÇÆĞ: " << path << std::endl;
+        std::cerr << "í…ìŠ¤ì²˜ ë¡œë“œ ì‹¤íŒ¨: " << path << std::endl;
         stbi_image_free(data);
     }
 
     return textureID;
 }
 
-// Å¥ºê¸Ê ÅØ½ºÃ³ ·Îµù ÇÔ¼ö
+// íë¸Œë§µ í…ìŠ¤ì²˜ ë¡œë”© í•¨ìˆ˜
 GLuint loadCubemap(const std::vector<std::string>& faces) {
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -239,10 +239,10 @@ GLuint loadCubemap(const std::vector<std::string>& faces) {
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 
                          0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             stbi_image_free(data);
-            std::cout << "Å¥ºê¸Ê ¸é ·Îµå ¼º°ø: " << faces[i] << std::endl;
+            std::cout << "íë¸Œë§µ ë©´ ë¡œë“œ ì„±ê³µ: " << faces[i] << std::endl;
         }
         else {
-            std::cerr << "Å¥ºê¸Ê ¸é ·Îµå ½ÇÆĞ: " << faces[i] << std::endl;
+            std::cerr << "íë¸Œë§µ ë©´ ë¡œë“œ ì‹¤íŒ¨: " << faces[i] << std::endl;
             stbi_image_free(data);
         }
     }
@@ -256,7 +256,7 @@ GLuint loadCubemap(const std::vector<std::string>& faces) {
     return textureID;
 }
 
-// BlockType¿¡ µû¶ó ÅØ½ºÃ³ ¹İÈ¯
+// BlockTypeì— ë”°ë¼ í…ìŠ¤ì²˜ ë°˜í™˜
 GLuint getTextureForBlockType(BlockType type) {
     switch (type) {
     case BlockType::DIRT:
@@ -274,29 +274,29 @@ GLuint getTextureForBlockType(BlockType type) {
     }
 }
 
-// ÇÔ¼ö ¼±¾ğ
+// í•¨ìˆ˜ ì„ ì–¸
 char* filetobuf(const char* file);
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
-GLuint make_uiTextureShader();  // ÅØ½ºÃ³ UI ¼ÎÀÌ´õ ¼±¾ğ Ãß°¡
+GLuint make_uiTextureShader();  // í…ìŠ¤ì²˜ UI ì…°ì´ë” ì„ ì–¸ ì¶”ê°€
 void initCube();
 void drawScene();
 void Reshape(int w, int h);
 void KeyboardDown(unsigned char key, int x, int y);
 void KeyboardUp(unsigned char key, int x, int y);
 void Mouse(int button, int state, int x, int y);
-void MouseWheel(int button, int dir, int x, int y);  // ¸¶¿ì½º ÈÙ ÇÔ¼ö Ãß°¡
+void MouseWheel(int button, int dir, int x, int y);  // ë§ˆìš°ìŠ¤ íœ  í•¨ìˆ˜ ì¶”ê°€
 void PassiveMotion(int x, int y);
 void updateCamera();
 void renderCube(glm::vec3 position, glm::vec3 color, BlockType type);
-void drawCrosshair();  // Å©·Î½ºÇì¾î ±×¸®±â
-void renderText(const std::string& text, float x, float y);  // ÅØ½ºÆ® ·»´õ¸µ
-void renderHotbar();  // ÇÖ¹Ù ·»´õ¸µ Ãß°¡
-void renderChallengeUI();  // Ã§¸°Áö UI
-void renderPreview();  // ¿Ï¼ºº» ¹Ì¸®º¸±â
-void selectGameMode();  // °ÔÀÓ ¸ğµå ¼±ÅÃ
-void renderStatsUI();  // Åë°è ·»´õ¸µ
+void drawCrosshair();  // í¬ë¡œìŠ¤í—¤ì–´ ê·¸ë¦¬ê¸°
+void renderText(const std::string& text, float x, float y);  // í…ìŠ¤íŠ¸ ë Œë”ë§
+void renderHotbar();  // í•«ë°” ë Œë”ë§ ì¶”ê°€
+void renderChallengeUI();  // ì±Œë¦°ì§€ UI
+void renderPreview();  // ì™„ì„±ë³¸ ë¯¸ë¦¬ë³´ê¸°
+void selectGameMode();  // ê²Œì„ ëª¨ë“œ ì„ íƒ
+void renderStatsUI();  // í†µê³„ ë Œë”ë§
 
 char* filetobuf(const char* file) {
     FILE* fptr;
@@ -326,7 +326,7 @@ void make_vertexShaders() {
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
     if (!result) {
         glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: vertex shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
         return;
     }
 }
@@ -342,7 +342,7 @@ void make_fragmentShaders() {
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
     if (!result) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: fragment shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: fragment shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
     }
 }
 
@@ -360,7 +360,7 @@ GLuint make_shaderProgram() {
     glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
     if (!result) {
         glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
-        std::cerr << "ERROR: shader program ¸µÅ© ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: shader program ë§í¬ ì‹¤íŒ¨\n" << errorLog << std::endl;
         return false;
     }
 
@@ -368,7 +368,7 @@ GLuint make_shaderProgram() {
     return shaderID;
 }
 
-// Å©·Î½ºÇì¾î¸¦ À§ÇÑ ½¦ÀÌ´õ »ı¼º ÇÔ¼ö
+// í¬ë¡œìŠ¤í—¤ì–´ë¥¼ ìœ„í•œ ì‰ì´ë” ìƒì„± í•¨ìˆ˜
 GLuint make_crosshairShader() {
     const char* vertexShaderSource = R"(
         #version 330 core
@@ -417,28 +417,28 @@ void initCube() {
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
 
-    // À§Ä¡ ¼Ó¼º (location = 0)
+    // ìœ„ì¹˜ ì†ì„± (location = 0)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // ¹ı¼± ¼Ó¼º (location = 1)
+    // ë²•ì„  ì†ì„± (location = 1)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    // UV ÁÂÇ¥ ¼Ó¼º (location = 2)
+    // UV ì¢Œí‘œ ì†ì„± (location = 2)
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);
 }
 
-// Å©·Î½ºÇì¾î ÃÊ±âÈ­ ÇÔ¼ö Ãß°¡
+// í¬ë¡œìŠ¤í—¤ì–´ ì´ˆê¸°í™” í•¨ìˆ˜ ì¶”ê°€
 void initCrosshair() {
     float crosshairVertices[] = {
-        // °¡·Î¼±
+        // ê°€ë¡œì„ 
         -15.0f, 0.0f, 0.0f,
          15.0f, 0.0f, 0.0f,
-         // ¼¼·Î¼±
+         // ì„¸ë¡œì„ 
           0.0f, -15.0f, 0.0f,
           0.0f,  15.0f, 0.0f
     };
@@ -456,10 +456,10 @@ void initCrosshair() {
     glBindVertexArray(0);
 }
 
-// UI Äõµå ÃÊ±âÈ­
+// UI ì¿¼ë“œ ì´ˆê¸°í™”
 void initQuad() {
     float quadVertices[] = {
-        // À§Ä¡ (x, y)
+        // ìœ„ì¹˜ (x, y)
         -1.0f,  1.0f,
         -1.0f, -1.0f,
          1.0f, -1.0f,
@@ -481,7 +481,7 @@ void initQuad() {
     glBindVertexArray(0);
 }
 
-// UI ¼ÎÀÌ´õ »ı¼º
+// UI ì…°ì´ë” ìƒì„±
 GLuint make_uiShader() {
     const char* vertexShaderSource = R"(
         #version 330 core
@@ -526,7 +526,7 @@ GLuint make_uiShader() {
     return program;
 }
 
-// ÅØ½ºÃ³¸¦ °¡Áø UI ¼ÎÀÌ´õ »ı¼º
+// í…ìŠ¤ì²˜ë¥¼ ê°€ì§„ UI ì…°ì´ë” ìƒì„±
 GLuint make_uiTextureShader() {
     const char* vertexShaderSource = R"(
         #version 330 core
@@ -574,7 +574,7 @@ GLuint make_uiTextureShader() {
     return program;
 }
 
-// ½ºÄ«ÀÌ¹Ú½º ¼Î´õ »ı¼º - Equirectangular ÅØ½ºÃ³¿ë
+// ìŠ¤ì¹´ì´ë°•ìŠ¤ ì…°ë” ìƒì„± - Equirectangular í…ìŠ¤ì²˜ìš©
 GLuint make_skyboxShader() {
     const char* vertexShaderSource = R"(
         #version 330 core
@@ -629,7 +629,7 @@ GLuint make_skyboxShader() {
     glGetShaderiv(vertShader, GL_COMPILE_STATUS, &result);
     if (!result) {
         glGetShaderInfoLog(vertShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: skybox vertex shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: skybox vertex shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
     }
 
     GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -639,7 +639,7 @@ GLuint make_skyboxShader() {
     glGetShaderiv(fragShader, GL_COMPILE_STATUS, &result);
     if (!result) {
         glGetShaderInfoLog(fragShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: skybox fragment shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: skybox fragment shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
     }
 
     GLuint program = glCreateProgram();
@@ -650,7 +650,7 @@ GLuint make_skyboxShader() {
     glGetProgramiv(program, GL_LINK_STATUS, &result);
     if (!result) {
         glGetProgramInfoLog(program, 512, NULL, errorLog);
-        std::cerr << "ERROR: skybox shader program ¸µÅ© ½ÇÆĞ\n" << errorLog << std::endl;
+        std::cerr << "ERROR: skybox shader program ë§í¬ ì‹¤íŒ¨\n" << errorLog << std::endl;
     }
 
     glDeleteShader(vertShader);
@@ -666,14 +666,14 @@ void renderCube(glm::vec3 position, glm::vec3 color, BlockType type) {
     GLint modelLoc = glGetUniformLocation(shaderProgramID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    // ÅØ½ºÃ³ »ç¿ë ¼³Á¤
+    // í…ìŠ¤ì²˜ ì‚¬ìš© ì„¤ì •
     GLint useTextureLoc = glGetUniformLocation(shaderProgramID, "useTexture");
-    glUniform1i(useTextureLoc, 1);  // true - ÅØ½ºÃ³ »ç¿ë
+    glUniform1i(useTextureLoc, 1);  // true - í…ìŠ¤ì²˜ ì‚¬ìš©
 
-    // BlockType¿¡ µû¶ó ÅØ½ºÃ³ ¼±ÅÃ
+    // BlockTypeì— ë”°ë¼ í…ìŠ¤ì²˜ ì„ íƒ
     GLuint texture = getTextureForBlockType(type);
     
-    // ÅØ½ºÃ³ ¹ÙÀÎµù
+    // í…ìŠ¤ì²˜ ë°”ì¸ë”©
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
     GLint texLoc = glGetUniformLocation(shaderProgramID, "blockTexture");
@@ -684,16 +684,16 @@ void renderCube(glm::vec3 position, glm::vec3 color, BlockType type) {
     glBindVertexArray(0);
 }
 
-// ¹Ú½º ·»´õ¸µ
+// ë°•ìŠ¤ ë Œë”ë§
 void renderBox(const glm::mat4& modelMatrix, const glm::vec3& color) {
     GLint modelLoc = glGetUniformLocation(shaderProgramID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-    // ´Ü»ö »ç¿ë ¼³Á¤
+    // ë‹¨ìƒ‰ ì‚¬ìš© ì„¤ì •
     GLint useTextureLoc = glGetUniformLocation(shaderProgramID, "useTexture");
     glUniform1i(useTextureLoc, 0);  
 
-    // ´Ü»ö ¼³Á¤
+    // ë‹¨ìƒ‰ ì„¤ì •
     GLint solidColorLoc = glGetUniformLocation(shaderProgramID, "solidColor");
     glUniform3fv(solidColorLoc, 1, glm::value_ptr(color));
 
@@ -702,35 +702,35 @@ void renderBox(const glm::mat4& modelMatrix, const glm::vec3& color) {
     glBindVertexArray(0);
 }
 
-// ÇÃ·¹ÀÌ¾î ·»´õ¸µ ÇÔ¼ö
+// í”Œë ˆì´ì–´ ë Œë”ë§ í•¨ìˆ˜
 void renderPlayer() {
     if (!player) return;
 
-    // ¸Ó¸®
+    // ë¨¸ë¦¬
     renderBox(player->getHeadTransform(), player->getHeadColor());
 
-    // ¸öÅë
+    // ëª¸í†µ
     renderBox(player->getBodyTransform(), player->getBodyColor());
 
-    // ¿ŞÆÈ
+    // ì™¼íŒ”
     renderBox(player->getLeftArmTransform(), player->getArmColor());
 
-    // ¿À¸¥ÆÈ
+    // ì˜¤ë¥¸íŒ”
     renderBox(player->getRightArmTransform(), player->getArmColor());
 
-    // ¿Ş´Ù¸®
+    // ì™¼ë‹¤ë¦¬
     renderBox(player->getLeftLegTransform(), player->getLegColor());
 
-    // ¿À¸¥´Ù¸®
+    // ì˜¤ë¥¸ë‹¤ë¦¬
     renderBox(player->getRightLegTransform(), player->getLegColor());
 }
 
-// ½ºÄ«ÀÌ¹Ú½º ·»´õ¸µ ÇÔ¼ö - 2D ÅØ½ºÃ³ »ç¿ë
+// ìŠ¤ì¹´ì´ë°•ìŠ¤ ë Œë”ë§ í•¨ìˆ˜ - 2D í…ìŠ¤ì²˜ ì‚¬ìš©
 void renderSkybox() {
     glDepthFunc(GL_LEQUAL);
     glUseProgram(skyboxShaderProgramID);
 
-    // view Çà·Ä¿¡¼­ ÀÌµ¿ Á¦°Å (È¸Àü¸¸ À¯Áö)
+    // view í–‰ë ¬ì—ì„œ ì´ë™ ì œê±° (íšŒì „ë§Œ ìœ ì§€)
     glm::mat4 view = glm::mat4(glm::mat3(glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp)));
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / height, 0.1f, 100.0f);
 
@@ -741,7 +741,7 @@ void renderSkybox() {
 
     glBindVertexArray(skyboxVAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, skyboxTexture);  // 2D ÅØ½ºÃ³ »ç¿ë
+    glBindTexture(GL_TEXTURE_2D, skyboxTexture);  // 2D í…ìŠ¤ì²˜ ì‚¬ìš©
     GLint texLoc = glGetUniformLocation(skyboxShaderProgramID, "skyboxTexture");
     glUniform1i(texLoc, 0);
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -751,7 +751,7 @@ void renderSkybox() {
     glUseProgram(shaderProgramID);
 }
 
-// drawCrosshair ÇÔ¼ö
+// drawCrosshair í•¨ìˆ˜
 void drawCrosshair() {
     glDisable(GL_DEPTH_TEST);
 
@@ -769,11 +769,11 @@ void drawCrosshair() {
     glUseProgram(shaderProgramID);
 }
 
-// ÅØ½ºÃ³ ·»´õ¸µ ÇÔ¼ö
+// í…ìŠ¤ì²˜ ë Œë”ë§ í•¨ìˆ˜
 void renderTexture(GLuint textureID, float x, float y, float width, float height) {
     glUseProgram(uiShaderProgramID);
 
-    // »ç°¢Çü À§Ä¡ ¹× Å©±â ¼³Á¤
+    // ì‚¬ê°í˜• ìœ„ì¹˜ ë° í¬ê¸° ì„¤ì •
     GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
     GLint sizeLoc = glGetUniformLocation(uiShaderProgramID, "size");
     GLint screenSizeLoc = glGetUniformLocation(uiShaderProgramID, "screenSize");
@@ -794,9 +794,9 @@ void renderTexture(GLuint textureID, float x, float y, float width, float height
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-// ÅØ½ºÆ® ·»´õ¸µ ÇÔ¼ö
+// í…ìŠ¤íŠ¸ ë Œë”ë§ í•¨ìˆ˜
 void renderText(const std::string& text, float x, float y) {
-    // ÇöÀç ¼ÎÀÌ´õ ÀúÀå
+    // í˜„ì¬ ì…°ì´ë” ì €ì¥
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
     
@@ -824,13 +824,13 @@ void renderText(const std::string& text, float x, float y) {
     
     glEnable(GL_DEPTH_TEST);
     
-    // ÀÌÀü ¼ÎÀÌ´õ º¹¿ø
+    // ì´ì „ ì…°ì´ë” ë³µì›
     glUseProgram(currentProgram);
 }
 
-// Äü½½·Ô ·»´õ¸µ ÇÔ¼ö
+// í€µìŠ¬ë¡¯ ë Œë”ë§ í•¨ìˆ˜
 void renderHotbar() {
-    // ÇöÀç ¼Î´õ ÀúÀå
+    // í˜„ì¬ ì…°ë” ì €ì¥
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
@@ -844,11 +844,11 @@ void renderHotbar() {
     const float startX = (width - totalWidth) / 2.0f;
     const float startY = 20.0f;
 
-    // °¢ ½½·Ô ·»´õ¸µ
+    // ê° ìŠ¬ë¡¯ ë Œë”ë§
     for (int i = 0; i < 5; i++) {
         float x = startX + i * (slotSize + slotSpacing);
         
-        // ½½·Ô ¹è°æ (È¸»ö Å×µÎ¸®)
+        // ìŠ¬ë¡¯ ë°°ê²½ (íšŒìƒ‰ í…Œë‘ë¦¬)
         glUseProgram(uiShaderProgramID);
         
         GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
@@ -856,11 +856,11 @@ void renderHotbar() {
         GLint screenSizeLoc = glGetUniformLocation(uiShaderProgramID, "screenSize");
         GLint colorLoc = glGetUniformLocation(uiShaderProgramID, "color");
         
-        // ¼±ÅÃµÈ ½½·ÔÀº ¹àÀº Å×µÎ¸®
+        // ì„ íƒëœ ìŠ¬ë¡¯ì€ ë°ì€ í…Œë‘ë¦¬
         if (i == static_cast<int>(selectedBlockType)) {
-            glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 0.9f);  // Èò»ö
+            glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 0.9f);  // í°ìƒ‰
         } else {
-            glUniform4f(colorLoc, 0.3f, 0.3f, 0.3f, 0.7f);  // È¸»ö
+            glUniform4f(colorLoc, 0.3f, 0.3f, 0.3f, 0.7f);  // íšŒìƒ‰
         }
         
         glUniform2f(posLoc, x, startY);
@@ -870,13 +870,13 @@ void renderHotbar() {
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
-        // ½½·Ô ¾ÈÂÊ ¹è°æ
+        // ìŠ¬ë¡¯ ì•ˆìª½ ë°°ê²½
         glUniform4f(colorLoc, 0.1f, 0.1f, 0.1f, 0.8f);
         glUniform2f(posLoc, x + 4, startY + 4);
         glUniform2f(sizeLoc, slotSize - 8, slotSize - 8);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
-        // ºí·Ï ÅØ½ºÃ³ ·»´õ¸µ
+        // ë¸”ë¡ í…ìŠ¤ì²˜ ë Œë”ë§
         glUseProgram(uiTextureShaderProgramID);
         
         posLoc = glGetUniformLocation(uiTextureShaderProgramID, "position");
@@ -888,7 +888,7 @@ void renderHotbar() {
         glUniform2f(sizeLoc, slotSize - 16, slotSize - 16);
         glUniform2f(screenSizeLoc, (float)width, (float)height);
         
-        // ºí·Ï Å¸ÀÔ¿¡ µû¶ó ÅØ½ºÃ³ ¼±ÅÃ
+        // ë¸”ë¡ íƒ€ì…ì— ë”°ë¼ í…ìŠ¤ì²˜ ì„ íƒ
         GLuint texture = getTextureForBlockType(static_cast<BlockType>(i));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -901,19 +901,19 @@ void renderHotbar() {
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     
-    // ¼ÎÀÌ´õ º¹¿ø
+    // ì…°ì´ë” ë³µì›
     glUseProgram(currentProgram);
 }
 
-// Åë°è UI ·»´õ¸µ
+// í†µê³„ UI ë Œë”ë§
 void renderStatsUI() {
     if (!showStats) return;
 
-    // ÇöÀç ¼Î´õ ÀúÀå
+    // í˜„ì¬ ì…°ë” ì €ì¥
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
-    // ¹İÅõ¸í °ËÀº ¹è°æ
+    // ë°˜íˆ¬ëª… ê²€ì€ ë°°ê²½
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -937,7 +937,7 @@ void renderStatsUI() {
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
-    // Åë°è ÅØ½ºÆ® Ç¥½Ã
+    // í†µê³„ í…ìŠ¤íŠ¸ í‘œì‹œ
     std::string title = "=== STATISTICS ===";
     renderText(title, width / 2 - 80, height / 2 + 100);
 
@@ -960,7 +960,7 @@ void renderStatsUI() {
     std::string closeText = "Press Q to close";
     renderText(closeText, width / 2 - 80, height / 2 - 100);
     
-    // ¼ÎÀÌ´õ º¹¿ø
+    // ì…°ì´ë” ë³µì›
     glUseProgram(currentProgram);
 }
 
@@ -972,7 +972,7 @@ void updateSelectedBlockType(int direction) {
     else if (currentType < 0) currentType = blockTypeCount - 1;
     selectedBlockType = static_cast<BlockType>(currentType);
     const char* blockNames[] = { "DIRT", "BRICKS", "COBBLESTONE", "MUDBLOCK", "QUARTZ" };
-    std::cout << "¼±ÅÃµÈ ºí·Ï: " << blockNames[currentType] << std::endl;
+    std::cout << "ì„ íƒëœ ë¸”ë¡: " << blockNames[currentType] << std::endl;
 }
 
 void renderChallengeUI() {
@@ -1112,7 +1112,7 @@ void processInput() {
     } else {
         player->setWalking(false);
     }
-    if (keyStates[' ']) {
+    if (keyStates['v'] || keyStates['V']) {
         glm::vec3 playerPos = player->getPosition();
         glm::vec3 oldPos = playerPos;
         playerPos.y += cameraSpeed;
@@ -1146,7 +1146,7 @@ void drawScene() {
     glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    // ½ºÄ«ÀÌ¹Ú½º ¸ÕÀú ·»´õ¸µ
+    // ìŠ¤ì¹´ì´ë°•ìŠ¤ ë¨¼ì € ë Œë”ë§
     renderSkybox();
     
     glUseProgram(shaderProgramID);
@@ -1198,10 +1198,10 @@ void KeyboardDown(unsigned char key, int x, int y) {
     if (key == 'f' || key == 'F') {
         if (cameraMode == CameraMode::FIRST_PERSON) {
             cameraMode = CameraMode::THIRD_PERSON;
-            std::cout << "3ÀÎÄª ¸ğµå" << std::endl;
+            std::cout << "3ì¸ì¹­ ëª¨ë“œ" << std::endl;
         } else {
             cameraMode = CameraMode::FIRST_PERSON;
-            std::cout << "1ÀÎÄª ¸ğµå" << std::endl;
+            std::cout << "1ì¸ì¹­ ëª¨ë“œ" << std::endl;
         }
     }
     if ((key == 'q' || key == 'Q') && challengeManager && challengeManager->getMode() == GameMode::FREE_BUILD) {
@@ -1213,7 +1213,7 @@ void KeyboardDown(unsigned char key, int x, int y) {
         int index = key - '1';
         selectedBlockType = static_cast<BlockType>(index);
         const char* blockNames[] = { "Dirt", "Bricks", "Cobblestone", "Mudblock", "Quartz" };
-        std::cout << "¼±ÅÃµÈ ºí·Ï: " << blockNames[index] << std::endl;
+        std::cout << "ì„ íƒëœ ë¸”ë¡: " << blockNames[index] << std::endl;
     }
 }
 
@@ -1271,7 +1271,7 @@ void MouseWheel(int button, int dir, int x, int y) {
     }
     selectedBlockType = static_cast<BlockType>(currentType);
     const char* blockNames[] = { "DIRT", "BRICKS", "COBBLESTONE", "MUDBLOCK", "QUARTZ" };
-    std::cout << "¼±ÅÃµÈ ºí·Ï: " << blockNames[currentType] << std::endl;
+    std::cout << "ì„ íƒëœ ë¸”ë¡: " << blockNames[currentType] << std::endl;
 }
 
 void PassiveMotion(int x, int y) {
@@ -1301,7 +1301,7 @@ void PassiveMotion(int x, int y) {
     glutPostRedisplay();
 }
 
-// ½ºÄ«ÀÌ¹Ú½º ÃÊ±âÈ­
+// ìŠ¤ì¹´ì´ë°•ìŠ¤ ì´ˆê¸°í™”
 void initSkybox() {
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -1315,6 +1315,9 @@ void initSkybox() {
     
     glBindVertexArray(0);
 }
+
+const int maxHeight = 20;
+const float noiseScale = 0.12f;  
 
 int main(int argc, char** argv) {
     width = 1280;
@@ -1346,7 +1349,7 @@ int main(int argc, char** argv) {
     mudblockTexture = loadTexture("textures/mudblock.png");
     quartzTexture = loadTexture("textures/quartz.png");
     
-    // ½ºÄ«ÀÌ¹Ú½º ÅØ½ºÃ³ ·Îµù
+    // ìŠ¤ì¹´ì´ë°•ìŠ¤ í…ìŠ¤ì²˜ ë¡œë”©
     skyboxTexture = loadTexture("textures/sky_minecraft.png");
     
     blockManager = new BlockManager();

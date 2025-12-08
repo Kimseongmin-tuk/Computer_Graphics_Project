@@ -31,6 +31,11 @@ GLuint cobblestoneTexture;
 GLuint mudblockTexture;
 GLuint quartzTexture;
 
+// 스카이박스
+GLuint skyboxVAO, skyboxVBO;
+GLuint skyboxTexture;
+GLuint skyboxShaderProgramID;
+
 GLuint quadVAO, quadVBO;
 GLuint uiShaderProgramID;
 GLuint uiTextureShaderProgramID;  // UI
@@ -130,6 +135,51 @@ float cubeVertices[] = {
     -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 };
 
+// 스카이박스 버텍스 데이터 
+float skyboxVertices[] = {
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+};
+
 // 텍스처 로딩 함수
 GLuint loadTexture(const char* path) {
     GLuint textureID;
@@ -164,6 +214,44 @@ GLuint loadTexture(const char* path) {
         std::cerr << "텍스처 로드 실패: " << path << std::endl;
         stbi_image_free(data);
     }
+
+    return textureID;
+}
+
+// 큐브맵 텍스처 로딩 함수
+GLuint loadCubemap(const std::vector<std::string>& faces) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++) {
+        unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+            GLenum format = GL_RGB;
+            if (nrChannels == 1)
+                format = GL_RED;
+            else if (nrChannels == 3)
+                format = GL_RGB;
+            else if (nrChannels == 4)
+                format = GL_RGBA;
+
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 
+                         0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+            std::cout << "큐브맵 면 로드 성공: " << faces[i] << std::endl;
+        }
+        else {
+            std::cerr << "큐브맵 면 로드 실패: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     return textureID;
 }
@@ -486,6 +574,91 @@ GLuint make_uiTextureShader() {
     return program;
 }
 
+// 스카이박스 셰더 생성 - Equirectangular 텍스처용
+GLuint make_skyboxShader() {
+    const char* vertexShaderSource = R"(
+        #version 330 core
+        layout (location = 0) in vec3 aPos;
+        
+        out vec3 WorldPos;
+        
+        uniform mat4 projection;
+        uniform mat4 view;
+        
+        void main()
+        {
+            WorldPos = aPos;
+            vec4 pos = projection * view * vec4(aPos, 1.0);
+            gl_Position = pos.xyww;
+        }
+    )";
+
+    const char* fragmentShaderSource = R"(
+        #version 330 core
+        out vec4 FragColor;
+        
+        in vec3 WorldPos;
+        
+        uniform sampler2D skyboxTexture;
+        
+        const float PI = 3.14159265359;
+        
+        vec2 SampleSphericalMap(vec3 v)
+        {
+            vec3 n = normalize(v);
+            vec2 uv;
+            uv.x = atan(n.z, n.x) / (2.0 * PI) + 0.5;
+            uv.y = asin(-n.y) / PI + 0.5;
+            return uv;
+        }
+        
+        void main()
+        {    
+            vec2 uv = SampleSphericalMap(normalize(WorldPos));
+            vec3 color = texture(skyboxTexture, uv).rgb;
+            FragColor = vec4(color, 1.0);
+        }
+    )";
+
+    GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertShader);
+
+    GLint result;
+    GLchar errorLog[512];
+    glGetShaderiv(vertShader, GL_COMPILE_STATUS, &result);
+    if (!result) {
+        glGetShaderInfoLog(vertShader, 512, NULL, errorLog);
+        std::cerr << "ERROR: skybox vertex shader 컴파일 실패\n" << errorLog << std::endl;
+    }
+
+    GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragShader);
+
+    glGetShaderiv(fragShader, GL_COMPILE_STATUS, &result);
+    if (!result) {
+        glGetShaderInfoLog(fragShader, 512, NULL, errorLog);
+        std::cerr << "ERROR: skybox fragment shader 컴파일 실패\n" << errorLog << std::endl;
+    }
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertShader);
+    glAttachShader(program, fragShader);
+    glLinkProgram(program);
+
+    glGetProgramiv(program, GL_LINK_STATUS, &result);
+    if (!result) {
+        glGetProgramInfoLog(program, 512, NULL, errorLog);
+        std::cerr << "ERROR: skybox shader program 링크 실패\n" << errorLog << std::endl;
+    }
+
+    glDeleteShader(vertShader);
+    glDeleteShader(fragShader);
+
+    return program;
+}
+
 void renderCube(glm::vec3 position, glm::vec3 color, BlockType type) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -552,6 +725,32 @@ void renderPlayer() {
     renderBox(player->getRightLegTransform(), player->getLegColor());
 }
 
+// 스카이박스 렌더링 함수 - 2D 텍스처 사용
+void renderSkybox() {
+    glDepthFunc(GL_LEQUAL);
+    glUseProgram(skyboxShaderProgramID);
+
+    // view 행렬에서 이동 제거 (회전만 유지)
+    glm::mat4 view = glm::mat4(glm::mat3(glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp)));
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / height, 0.1f, 100.0f);
+
+    GLint viewLoc = glGetUniformLocation(skyboxShaderProgramID, "view");
+    GLint projLoc = glGetUniformLocation(skyboxShaderProgramID, "projection");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+    glBindVertexArray(skyboxVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, skyboxTexture);  // 2D 텍스처 사용
+    GLint texLoc = glGetUniformLocation(skyboxShaderProgramID, "skyboxTexture");
+    glUniform1i(texLoc, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+    
+    glDepthFunc(GL_LESS);
+    glUseProgram(shaderProgramID);
+}
+
 // drawCrosshair 함수
 void drawCrosshair() {
     glDisable(GL_DEPTH_TEST);
@@ -603,7 +802,7 @@ void renderText(const std::string& text, float x, float y) {
     
     glDisable(GL_DEPTH_TEST);
     glUseProgram(0); 
-    
+   
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -631,7 +830,7 @@ void renderText(const std::string& text, float x, float y) {
 
 // 퀵슬롯 렌더링 함수
 void renderHotbar() {
-    // 현재 셰이더 저장
+    // 현재 셰더 저장
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
@@ -710,7 +909,7 @@ void renderHotbar() {
 void renderStatsUI() {
     if (!showStats) return;
 
-    // 현재 셰이더 저장
+    // 현재 셰더 저장
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
@@ -946,6 +1145,10 @@ void drawScene() {
     }
     glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // 스카이박스 먼저 렌더링
+    renderSkybox();
+    
     glUseProgram(shaderProgramID);
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
@@ -1098,6 +1301,21 @@ void PassiveMotion(int x, int y) {
     glutPostRedisplay();
 }
 
+// 스카이박스 초기화
+void initSkybox() {
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    
+    glBindVertexArray(0);
+}
+
 int main(int argc, char** argv) {
     width = 1280;
     height = 720;
@@ -1116,14 +1334,21 @@ int main(int argc, char** argv) {
     initCube();
     initCrosshair();
     initQuad();
+    initSkybox();
     crosshairShaderProgramID = make_crosshairShader();
     uiShaderProgramID = make_uiShader();
     uiTextureShaderProgramID = make_uiTextureShader();
+    skyboxShaderProgramID = make_skyboxShader();
+    
     dirtTexture = loadTexture("textures/dirt.png");
     bricksTexture = loadTexture("textures/bricks.png");
     cobblestoneTexture = loadTexture("textures/cobblestone.png");
     mudblockTexture = loadTexture("textures/mudblock.png");
     quartzTexture = loadTexture("textures/quartz.png");
+    
+    // 스카이박스 텍스처 로딩
+    skyboxTexture = loadTexture("textures/sky_minecraft.png");
+    
     blockManager = new BlockManager();
     player = new Player(glm::vec3(0.0f, 2.0f, 0.0f));
     challengeManager = new ChallengeManager();

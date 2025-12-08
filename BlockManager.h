@@ -35,8 +35,8 @@ private:
 public:
     BlockManager();
 
-    bool addBlock(const glm::vec3& worldPos, BlockType type = BlockType::CUBE);
-    bool addBlock(const GridPosition& gridPos, BlockType type = BlockType::CUBE);
+    bool addBlock(const glm::vec3& worldPos, BlockType type = BlockType::DIRT);
+    bool addBlock(const GridPosition& gridPos, BlockType type = BlockType::DIRT);
 
     bool removeBlock(const glm::vec3& worldPos);
     bool removeBlock(const GridPosition& gridPos);
@@ -49,7 +49,7 @@ public:
 
     bool raycastBlock(const Ray& ray, RaycastHit& hit, Block** hitBlock = nullptr);
 
-    // 충돌 감지 함수 추가
+    // 충돌 감지 함수
     bool checkCollision(const AABB& playerAABB) const;
 
     int getBlockCount() const { return blocks.size(); }
@@ -58,4 +58,4 @@ public:
     const std::unordered_map<GridPosition, Block>& getAllBlocks() const { return blocks; }
 };
 
-#endif // BLOCKMANAGER_H
+#endif 

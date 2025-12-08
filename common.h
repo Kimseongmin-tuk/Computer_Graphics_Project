@@ -4,16 +4,15 @@
 #include <gl/glew.h>
 #include <gl/freeglut.h>
 
-#include <gl/glm/glm.hpp>
-#include <gl/glm/gtc/matrix_transform.hpp>
-#include <gl/glm/gtc/type_ptr.hpp>
-
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 //#include <glm/glm.hpp>
 //#include <glm/ext.hpp>
 //#include <glm/gtc/matrix_transform.hpp>
 //#include <glm/gtc/type_ptr.hpp>
-
 
 #include <iostream>
 #include <vector>

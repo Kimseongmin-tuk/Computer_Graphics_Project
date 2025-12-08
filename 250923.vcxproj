@@ -148,6 +148,7 @@
     <ClInclude Include="RayCast.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="ShapeManager.h" />
+    <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CAMERA_FOLLOW.md" />
@@ -161,7 +162,11 @@
     <None Include="PLAYER_FIX.md" />
     <None Include="PLAYER_ROTATION.md" />
     <None Include="RAYCAST_FIX.md" />
+    <None Include="TEXTURE_GUIDE.md" />
     <None Include="vertex.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="main_addition.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

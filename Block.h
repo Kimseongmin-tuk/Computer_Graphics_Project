@@ -5,8 +5,11 @@
 #include "RayCast.h"
 
 enum class BlockType {
-    CUBE,
-    SPHERE
+    DIRT,
+    BRICKS,
+    COBBLESTONE,
+    MUDBLOCK,
+    QUARTZ
 };
 
 class Block {
@@ -19,7 +22,7 @@ private:
 
 public:
     Block(const glm::vec3& pos, float blockSize = Constants::BLOCK_SIZE,
-        BlockType blockType = BlockType::CUBE);
+        BlockType blockType = BlockType::DIRT);
 
     glm::vec3 getPosition() const { return position; }
     float getSize() const { return size; }
@@ -30,10 +33,11 @@ public:
     void setPosition(const glm::vec3& pos) { position = pos; }
     void setColor(const glm::vec3& col) { color = col; }
     void setSpecial(bool special) { isSpecial = special; }
+    void setType(BlockType newType) { type = newType; }
 
     AABB getAABB() const;
     glm::vec3 getMin() const { return position - glm::vec3(size * 0.5f); }
     glm::vec3 getMax() const { return position + glm::vec3(size * 0.5f); }
 };
 
-#endif // BLOCK_H
+#endif 

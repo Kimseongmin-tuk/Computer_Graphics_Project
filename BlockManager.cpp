@@ -14,7 +14,7 @@ glm::vec3 GridPosition::toWorldPosition() const {
     );
 }
 
-BlockManager::BlockManager() : selectedBlockType(BlockType::CUBE) {
+BlockManager::BlockManager() : selectedBlockType(BlockType::DIRT) {
     for (int x = -2; x <= 2; x++) {
         for (int z = -2; z <= 2; z++) {
             addBlock(GridPosition(x, 0, z));

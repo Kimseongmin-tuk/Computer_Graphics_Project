@@ -1687,7 +1687,7 @@ void Mouse(int button, int state, int x, int y) {
         if (blockManager->raycastBlock(ray, hit, &hitBlock)) {
             if (button == GLUT_LEFT_BUTTON) {
                 // 블록 배치
-                glm::vec3 newPos = hitBlock->getPosition() + hit.normal * Constants::BLOCK_SIZE;
+                glm::vec3 newPos = hitBlock->getPosition() - hit.normal * Constants::BLOCK_SIZE;
                 bool added = blockManager->addBlock(newPos, selectedBlockType);
                 if (added) blocksPlaced++;
 

@@ -58,7 +58,34 @@ enum class CameraMode {
 CameraMode cameraMode = CameraMode::THIRD_PERSON;
 float thirdPersonDistance = 5.0f;
 
-// 마우스 워프시 발생 플래그
+// 게임 상태 (메뉴/게임)
+enum class GameState {
+    MAIN_MENU,
+    CHALLENGE_SELECT,
+    PLAYING
+};
+GameState gameState = GameState::MAIN_MENU;
+
+// UI 버튼 
+struct UIButton {
+    float x, y, width, height;
+    std::string text;
+    bool isHovered;
+    
+    UIButton(float _x = 0, float _y = 0, float _w = 0, float _h = 0, const std::string& _text = "")
+        : x(_x), y(_y), width(_w), height(_h), text(_text), isHovered(false) {}
+    
+    bool contains(float mx, float my) const {
+        return mx >= x && mx <= x + width && my >= y && my <= y + height;
+    }
+};
+
+// 메뉴 버튼
+std::vector<UIButton> mainMenuButtons;
+std::vector<UIButton> challengeSelectButtons;
+int hoveredButtonIndex = -1;
+
+// 마우스 워프 발생 플래그
 bool ignoreNextMouseMove = false;
 
 // 키 상태
@@ -79,7 +106,7 @@ float totalPlayTime = 0.0f;
 bool showStats = false;
 
 // 게임 시작 여부
-bool gameStarted = true;  // 임시로 true로 설정 
+bool gameStarted = false;  
 
 // 현재 선택된 블록 타입
 BlockType selectedBlockType = BlockType::DIRT;
@@ -285,24 +312,30 @@ char* filetobuf(const char* file);
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
-GLuint make_uiTextureShader();  // 텍스처 UI 셰이더 선언 추가
+GLuint make_uiTextureShader();  // 텍스처 UI 셰이더 선언 
 void initCube();
 void drawScene();
 void Reshape(int w, int h);
 void KeyboardDown(unsigned char key, int x, int y);
 void KeyboardUp(unsigned char key, int x, int y);
 void Mouse(int button, int state, int x, int y);
-void MouseWheel(int button, int dir, int x, int y);  // 마우스 휠 함수 추가
+void MouseWheel(int button, int dir, int x, int y);  // 마우스 휠 함수 
 void PassiveMotion(int x, int y);
 void updateCamera();
 void renderCube(glm::vec3 position, glm::vec3 color, BlockType type);
 void drawCrosshair();  // 크로스헤어 그리기
 void renderText(const std::string& text, float x, float y);  // 텍스트 렌더링
-void renderHotbar();  // 핫바 렌더링 추가
+void renderHotbar();  // 핫바 렌더링
 void renderChallengeUI();  // 챌린지 UI
 void renderPreview();  // 완성본 미리보기
 void selectGameMode();  // 게임 모드 선택
 void renderStatsUI();  // 통계 렌더링
+void renderMainMenu();  // 메인 메뉴 UI
+void renderChallengeSelectMenu();  // 챌린지 선택 UI
+void initMenuButtons();  // 메뉴 버튼 초기화
+void handleMenuClick(int x, int y);  // 메뉴 클릭 처리
+void updateMenuHover(int x, int y);  // 메뉴 호버 업데이트
+void initSkybox();  // 스카이박스 초기화
 
 char* filetobuf(const char* file) {
     FILE* fptr;
@@ -580,7 +613,7 @@ GLuint make_uiTextureShader() {
     return program;
 }
 
-// 스카이박스 셰더 생성 - Equirectangular 텍스처용
+// 스카이박스 셰이더 생성 - Equirectangular 텍스처용
 GLuint make_skyboxShader() {
     const char* vertexShaderSource = R"(
         #version 330 core
@@ -731,12 +764,12 @@ void renderPlayer() {
     renderBox(player->getRightLegTransform(), player->getLegColor());
 }
 
-// 스카이박스 렌더링 함수 - 2D 텍스처 사용
+// 스카이박스 렌더링
 void renderSkybox() {
     glDepthFunc(GL_LEQUAL);
     glUseProgram(skyboxShaderProgramID);
 
-    // view 행렬에서 이동 제거 (회전만 유지)
+    
     glm::mat4 view = glm::mat4(glm::mat3(glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp)));
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / height, 0.1f, 100.0f);
 
@@ -757,7 +790,7 @@ void renderSkybox() {
     glUseProgram(shaderProgramID);
 }
 
-// drawCrosshair 함수
+
 void drawCrosshair() {
     glDisable(GL_DEPTH_TEST);
 
@@ -830,7 +863,6 @@ void renderText(const std::string& text, float x, float y) {
 
     glEnable(GL_DEPTH_TEST);
 
-    // 이전 셰이더 복원
     glUseProgram(currentProgram);
 }
 
@@ -854,7 +886,7 @@ void renderHotbar() {
     for (int i = 0; i < 5; i++) {
         float x = startX + i * (slotSize + slotSpacing);
 
-        // 슬롯 배경 (회색 테두리)
+        // 슬롯 배경
         glUseProgram(uiShaderProgramID);
 
         GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
@@ -876,12 +908,14 @@ void renderHotbar() {
 
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
 
         // 슬롯 안쪽 배경
         glUniform4f(colorLoc, 0.1f, 0.1f, 0.1f, 0.8f);
         glUniform2f(posLoc, x + 4, startY + 4);
         glUniform2f(sizeLoc, slotSize - 8, slotSize - 8);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
 
         // 블록 텍스처 렌더링
         glUseProgram(uiTextureShaderProgramID);
@@ -901,10 +935,11 @@ void renderHotbar() {
         glBindTexture(GL_TEXTURE_2D, texture);
         glUniform1i(texLoc, 0);
 
+        glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
     }
 
-    glBindVertexArray(0);
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
@@ -916,7 +951,6 @@ void renderHotbar() {
 void renderStatsUI() {
     if (!showStats) return;
 
-    // 현재 셰더 저장
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
@@ -980,6 +1014,284 @@ void updateSelectedBlockType(int direction) {
     selectedBlockType = static_cast<BlockType>(currentType);
     const char* blockNames[] = { "DIRT", "BRICKS", "COBBLESTONE", "MUDBLOCK", "QUARTZ" };
     std::cout << "선택된 블록: " << blockNames[currentType] << std::endl;
+}
+
+// 메뉴 버튼 초기화
+void initMenuButtons() {
+    mainMenuButtons.clear();
+    challengeSelectButtons.clear();
+    
+    // 메인 메뉴 버튼
+    float buttonWidth = 300.0f;
+    float buttonHeight = 60.0f;
+    float centerX = width / 2.0f - buttonWidth / 2.0f;
+    float startY = height / 2.0f - 50.0f;
+    
+    mainMenuButtons.push_back(UIButton(centerX, startY, buttonWidth, buttonHeight, "Free Build Mode"));
+    mainMenuButtons.push_back(UIButton(centerX, startY + 80.0f, buttonWidth, buttonHeight, "Challenge Mode"));
+    mainMenuButtons.push_back(UIButton(centerX, startY + 160.0f, buttonWidth, buttonHeight, "Exit Game"));
+    
+    // 챌린지 선택 버튼
+    float challengeStartY = height / 2.0f - 100.0f;
+    challengeSelectButtons.push_back(UIButton(centerX, challengeStartY, buttonWidth, buttonHeight, "1. First Jump (Easy)"));
+    challengeSelectButtons.push_back(UIButton(centerX, challengeStartY + 80.0f, buttonWidth, buttonHeight, "2. Sky Parkour (Medium)"));
+    challengeSelectButtons.push_back(UIButton(centerX, challengeStartY + 160.0f, buttonWidth, buttonHeight, "3. Extreme Parkour (Hard)"));
+    challengeSelectButtons.push_back(UIButton(centerX, challengeStartY + 260.0f, buttonWidth, buttonHeight, "Back to Menu"));
+}
+
+// 버튼 렌더링 헬퍼 함수
+void renderButton(const UIButton& button, bool isSelected = false) {
+    GLint currentProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glUseProgram(uiShaderProgramID);
+    
+    GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
+    GLint sizeLoc = glGetUniformLocation(uiShaderProgramID, "size");
+    GLint screenSizeLoc = glGetUniformLocation(uiShaderProgramID, "screenSize");
+    GLint colorLoc = glGetUniformLocation(uiShaderProgramID, "color");
+    
+    // 버튼 배경
+    if (button.isHovered || isSelected) {
+        glUniform4f(colorLoc, 0.3f, 0.6f, 0.3f, 0.9f);  // 호버 시 초록색
+    } else {
+        glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 0.8f);  // 기본 회색
+    }
+    
+    glUniform2f(posLoc, button.x + button.width / 2, button.y + button.height / 2);
+    glUniform2f(sizeLoc, button.width, button.height);
+    glUniform2f(screenSizeLoc, (float)width, (float)height);
+    
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+    // 버튼 테두리
+    glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 0.9f);
+    glUniform2f(sizeLoc, button.width + 4, button.height + 4);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+    // 내부 다시 그리기
+    if (button.isHovered || isSelected) {
+        glUniform4f(colorLoc, 0.3f, 0.6f, 0.3f, 0.9f);
+    } else {
+        glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 0.8f);
+    }
+    glUniform2f(sizeLoc, button.width, button.height);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+    glBindVertexArray(0);
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    
+    // 버튼 텍스트
+    float textX = button.x + button.width / 2 - button.text.length() * 4.5f;
+    float textY = height - (button.y + button.height / 2 + 6);
+    renderText(button.text, textX, textY);
+    
+    glUseProgram(currentProgram);
+}
+
+// 메인 메뉴 렌더링
+void renderMainMenu() {
+    GLint currentProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    
+    // 배경 어둡게
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glUseProgram(uiShaderProgramID);
+    
+    GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
+    GLint sizeLoc = glGetUniformLocation(uiShaderProgramID, "size");
+    GLint screenSizeLoc = glGetUniformLocation(uiShaderProgramID, "screenSize");
+    GLint colorLoc = glGetUniformLocation(uiShaderProgramID, "color");
+    
+    // 반투명 배경
+    glUniform2f(posLoc, (float)width / 2, (float)height / 2);
+    glUniform2f(sizeLoc, (float)width, (float)height);
+    glUniform2f(screenSizeLoc, (float)width, (float)height);
+    glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 0.6f);
+    
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    
+    // 타이틀
+    std::string title = "=== BLOCK BUILDER ===";
+    renderText(title, width / 2 - 100, height - 150);
+    
+    std::string subtitle = "Build your world!";
+    renderText(subtitle, width / 2 - 80, height - 190);
+    
+    // 버튼들 렌더링
+    for (const auto& button : mainMenuButtons) {
+        renderButton(button);
+    }
+    
+    // 조작법 안내
+    std::string controls1 = "Controls: WASD - Move, Space - Jump, Mouse - Look";
+    renderText(controls1, width / 2 - 200, 80);
+    
+    std::string controls2 = "F - Camera Mode, 1-5 - Select Block, Q - Stats";
+    renderText(controls2, width / 2 - 180, 50);
+    
+    glUseProgram(currentProgram);
+}
+
+// 챌린지 선택 메뉴 렌더링
+void renderChallengeSelectMenu() {
+    GLint currentProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    
+    // 배경 어둡게
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glUseProgram(uiShaderProgramID);
+    
+    GLint posLoc = glGetUniformLocation(uiShaderProgramID, "position");
+    GLint sizeLoc = glGetUniformLocation(uiShaderProgramID, "size");
+    GLint screenSizeLoc = glGetUniformLocation(uiShaderProgramID, "screenSize");
+    GLint colorLoc = glGetUniformLocation(uiShaderProgramID, "color");
+    
+    // 반투명 배경
+    glUniform2f(posLoc, (float)width / 2, (float)height / 2);
+    glUniform2f(sizeLoc, (float)width, (float)height);
+    glUniform2f(screenSizeLoc, (float)width, (float)height);
+    glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 0.6f);
+    
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    
+    // 타이틀
+    std::string title = "=== SELECT CHALLENGE ===";
+    renderText(title, width / 2 - 120, height - 120);
+    
+    // 챌린지 설명
+    if (challengeManager) {
+        const auto& challenges = challengeManager->getAvailableChallenges();
+        float descY = height - 180;
+        
+        for (size_t i = 0; i < challenges.size() && i < 3; i++) {
+            std::string desc = challenges[i].description;
+
+            renderText(desc, width / 2 - 200, descY - i * 80);
+        }
+    }
+    
+    // 버튼들 렌더링
+    for (const auto& button : challengeSelectButtons) {
+        renderButton(button);
+    }
+    
+    glUseProgram(currentProgram);
+}
+
+// 메뉴 호버 업데이트
+void updateMenuHover(int x, int y) {
+    int mouseY = y;
+    
+    if (gameState == GameState::MAIN_MENU) {
+        for (auto& button : mainMenuButtons) {
+            button.isHovered = button.contains((float)x, (float)mouseY);
+        }
+    }
+    else if (gameState == GameState::CHALLENGE_SELECT) {
+        for (auto& button : challengeSelectButtons) {
+            button.isHovered = button.contains((float)x, (float)mouseY);
+        }
+    }
+}
+
+// 메뉴 클릭 처리
+void handleMenuClick(int x, int y) {
+    int mouseY = y;
+    
+    if (gameState == GameState::MAIN_MENU) {
+        for (size_t i = 0; i < mainMenuButtons.size(); i++) {
+            if (mainMenuButtons[i].contains((float)x, (float)mouseY)) {
+                switch (i) {
+                case 0:  // Free Build Mode
+                    std::cout << "자유 모드" << std::endl;
+                    challengeManager->setMode(GameMode::FREE_BUILD);
+                    if (player) {
+                        player->setPosition(glm::vec3(0.0f, 10.0f, 0.0f));
+                    }
+                    gameState = GameState::PLAYING;
+                    gameStarted = true;
+                    glutSetCursor(GLUT_CURSOR_NONE);
+                    glutWarpPointer(width / 2, height / 2);
+                    break;
+                    
+                case 1:  // Challenge Mode
+                    std::cout << "챌린지 모드" << std::endl;
+                    gameState = GameState::CHALLENGE_SELECT;
+                    break;
+                    
+                case 2:  // Exit Game
+                    std::cout << "게임 종료 중..." << std::endl;
+                    exit(0);
+                    break;
+                }
+                return;
+            }
+        }
+    }
+    else if (gameState == GameState::CHALLENGE_SELECT) {
+        for (size_t i = 0; i < challengeSelectButtons.size(); i++) {
+            if (challengeSelectButtons[i].contains((float)x, (float)mouseY)) {
+                if (i < 3) {
+                    // 챌린지 선택 (1, 2, 3)
+                    int challengeId = (int)i + 1;
+                    std::cout << "Challenge " << challengeId << " selected!" << std::endl;
+                    
+                    challengeManager->setMode(GameMode::CHALLENGE);
+                    challengeManager->loadChallenge(challengeId);
+                    challengeManager->startChallenge();
+                    
+                    // 챌린지별 시작 위치 설정
+                    if (player) {
+                        switch (challengeId) {
+                        case 1: // First Jump
+                            player->setPosition(glm::vec3(0.0f, 6.0f, 0.0f));
+                            break;
+                        case 2: // Sky Parkour
+                            player->setPosition(glm::vec3(0.0f, 11.0f, 0.0f));
+                            break;
+                        case 3: // Extreme Parkour
+                            player->setPosition(glm::vec3(0.0f, 16.0f, 0.0f));
+                            break;
+                        }
+                    }
+                    
+                    gameState = GameState::PLAYING;
+                    gameStarted = true;
+                    glutSetCursor(GLUT_CURSOR_NONE);
+                    glutWarpPointer(width / 2, height / 2);
+                }
+                else {
+                    // Back to Menu
+                    std::cout << "Back to main menu" << std::endl;
+                    gameState = GameState::MAIN_MENU;
+                }
+                return;
+            }
+        }
+    }
 }
 
 void renderChallengeUI() {
@@ -1151,86 +1463,17 @@ void renderPreview() {
 }
 
 void selectGameMode() {
+    // UI 기반 모드 선택으로 변경 - 메뉴 상태로 시작
+    gameState = GameState::MAIN_MENU;
+    gameStarted = false;
+    
+    // 메뉴에서는 마우스 커서 보이기
+    glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+    
     std::cout << "========================================" << std::endl;
-    std::cout << "   BlockBuilder - Game Mode Selection   " << std::endl;
+    std::cout << "   BlockBuilder - 메인 메뉴   " << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "1. Free Build Mode - Build freely!" << std::endl;
-    std::cout << "2. Challenge Mode - Complete challenges!" << std::endl;
-    std::cout << "Select mode (1 or 2): ";
-
-    int choice;
-    std::cin >> choice;
-
-    if (choice == 1) {
-        std::cout << "\nFree Build Mode selected!" << std::endl;
-        challengeManager->setMode(GameMode::FREE_BUILD);
-
-        // 자유 모드: 지형 위에 배치
-        if (player) {
-            player->setPosition(glm::vec3(0.0f, 5.0f, 0.0f));
-        }
-    }
-    else if (choice == 2) {
-        std::cout << "\nChallenge Mode selected!" << std::endl;
-        challengeManager->setMode(GameMode::CHALLENGE);
-
-        std::cout << "\n========================================" << std::endl;
-        std::cout << "   Available Challenges   " << std::endl;
-        std::cout << "========================================" << std::endl;
-
-        // 챌린지 목록 표시
-        const auto& challenges = challengeManager->getAvailableChallenges();
-        for (const auto& challenge : challenges) {
-            std::cout << challenge.id << ". " << challenge.name;
-            std::cout << " [" << challengeManager->getChallengeTypeString(challenge.type) << "]";
-            std::cout << " (" << challengeManager->getDifficultyString(challenge.difficulty) << ")";
-            std::cout << " - " << challenge.timeLimit << "s" << std::endl;
-            std::cout << "   " << challenge.description << std::endl;
-        }
-
-        std::cout << "\nSelect challenge (1-" << challenges.size() << "): ";
-        int challengeChoice;
-        std::cin >> challengeChoice;
-
-        if (challengeChoice < 1 || challengeChoice >(int)challenges.size()) {
-            std::cout << "Invalid choice. Defaulting to First Jump." << std::endl;
-            challengeChoice = 1;
-        }
-
-        challengeManager->loadChallenge(challengeChoice);
-        challengeManager->startChallenge();
-        std::cout << "Challenge loaded!" << std::endl;
-
-        // 챌린지별 시작 위치 설정
-        if (player) {
-            switch (challengeChoice) {
-            case 1: // First Jump
-                player->setPosition(glm::vec3(0.0f, 6.0f, 0.0f));
-                break;
-            case 2: // Sky Parkour
-                player->setPosition(glm::vec3(0.0f, 11.0f, 0.0f));
-                break;
-            case 3: // Extreme Parkour
-                player->setPosition(glm::vec3(0.0f, 16.0f, 0.0f));
-                break;
-            default:
-                player->setPosition(glm::vec3(0.0f, 6.0f, 0.0f));
-                break;
-            }
-        }
-    }
-    else {
-        std::cout << "Invalid choice. Defaulting to Free Build Mode." << std::endl;
-        challengeManager->setMode(GameMode::FREE_BUILD);
-
-        // 자유 모드: 지형 위에 배치
-        if (player) {
-            player->setPosition(glm::vec3(0.0f, 5.0f, 0.0f));
-        }
-    }
-
-    gameStarted = true;
-    std::cout << "Game starting..." << std::endl;
+    std::cout << "게임 모드 선택 대기중" << std::endl;
 }
 
 void updateCamera() {
@@ -1278,33 +1521,26 @@ void processInput() {
     glm::vec3 right = glm::cross(forward, cameraUp);
     if (glm::length(right) > 0.0f) right = glm::normalize(right);
 
-    // ==========================================
-    // WASD 수평 이동 처리
-    // ==========================================
     if (keyStates['w'] || keyStates['W']) { moveDirection += forward; isMoving = true; }
     if (keyStates['s'] || keyStates['S']) { moveDirection -= forward; isMoving = true; }
     if (keyStates['a'] || keyStates['A']) { moveDirection -= right; isMoving = true; }
     if (keyStates['d'] || keyStates['D']) { moveDirection += right; isMoving = true; }
 
-    // 수평 이동 적용
     if (isMoving && glm::length(moveDirection) > 0.0f) {
         moveDirection = glm::normalize(moveDirection);
 
         glm::vec3 playerPos = player->getPosition();
         glm::vec3 oldPos = playerPos;
 
-        // 수평 이동만 적용 (Y는 유지)
         float currentY = playerPos.y;
         playerPos += moveDirection * cameraSpeed;
         playerPos.y = currentY;
 
         player->setPosition(playerPos);
 
-        // 수평 충돌 체크 (일반 블록 + 챌린지 플랫폼)
         AABB playerAABB = player->getAABB();
         bool collided = blockManager->checkCollision(playerAABB);
 
-        // 챌린지 모드: 플랫폼 블록과도 충돌 체크
         if (!collided && challengeManager && challengeManager->isChallengeMode()) {
             collided = challengeManager->checkPlatformCollision(playerAABB);
         }
@@ -1321,60 +1557,48 @@ void processInput() {
         player->setWalking(false);
     }
 
-    // ==========================================
-    // 걷기 모드: 중력 및 수직 이동 처리
-    // ==========================================
     if (!player->getIsFlying()) {
-        // 중력 적용
         player->applyGravity(deltaTime);
 
         glm::vec3 playerPos = player->getPosition();
         glm::vec3 oldPos = playerPos;
 
-        // 수직 속도에 따라 이동
         float verticalMovement = player->getVerticalVelocity() * deltaTime;
         playerPos.y += verticalMovement;
 
         player->setPosition(playerPos);
 
-        // 수직 충돌 체크 (일반 블록 + 챌린지 플랫폼)
         AABB playerAABB = player->getAABB();
         bool collided = blockManager->checkCollision(playerAABB);
 
-        // 챌린지 모드: 플랫폼 블록과도 충돌 체크
         if (!collided && challengeManager && challengeManager->isChallengeMode()) {
             collided = challengeManager->checkPlatformCollision(playerAABB);
         }
 
         if (collided) {
             if (player->getVerticalVelocity() < 0) {
-                // 아래로 떨어지다가 충돌 = 땅에 착지
                 player->setPosition(oldPos);
                 player->setVerticalVelocity(0.0f);
                 player->setOnGround(true);
             }
             else {
-                // 위로 올라가다가 충돌 = 천장에 부딪힘
                 player->setPosition(oldPos);
                 player->setVerticalVelocity(0.0f);
             }
         }
         else {
-            // 충돌 없음 = 공중에 있음
             player->setOnGround(false);
         }
 
-        // 땅 감지 개선: 아주 작은 거리 체크
         if (!player->getIsOnGround()) {
             glm::vec3 testPos = playerPos;
-            testPos.y -= 0.01f;  // 1cm 아래 체크
+            testPos.y -= 0.01f;
 
             player->setPosition(testPos);
             AABB testAABB = player->getAABB();
 
             bool onGround = blockManager->checkCollision(testAABB);
 
-            // 챌린지 모드: 플랫폼 블록과도 체크
             if (!onGround && challengeManager && challengeManager->isChallengeMode()) {
                 onGround = challengeManager->checkPlatformCollision(testAABB);
             }
@@ -1387,9 +1611,6 @@ void processInput() {
             player->setPosition(playerPos);
         }
     }
-    // ==========================================
-    // 비행 모드: 스페이스바로 상승
-    // ==========================================
     else {
         if (keyStates[' ']) {
             glm::vec3 playerPos = player->getPosition();
@@ -1400,7 +1621,6 @@ void processInput() {
             AABB playerAABB = player->getAABB();
             bool collided = blockManager->checkCollision(playerAABB);
 
-            // 챌린지 모드: 플랫폼 블록과도 충돌 체크
             if (!collided && challengeManager && challengeManager->isChallengeMode()) {
                 collided = challengeManager->checkPlatformCollision(playerAABB);
             }
@@ -1410,7 +1630,6 @@ void processInput() {
             }
         }
 
-        // 비행 모드: 블록 윗면 감지 시 자동 착지
         glm::vec3 playerPos = player->getPosition();
         glm::vec3 oldPos = playerPos;
 
@@ -1422,7 +1641,6 @@ void processInput() {
 
         bool onGround = blockManager->checkCollision(testAABB);
 
-        // 챌린지 모드: 플랫폼 블록과도 체크
         if (!onGround && challengeManager && challengeManager->isChallengeMode()) {
             onGround = challengeManager->checkPlatformCollision(testAABB);
         }
@@ -1437,12 +1655,8 @@ void processInput() {
         player->setPosition(oldPos);
     }
 
-    // ==========================================
-    // C키 처리 (하강)
-    // ==========================================
     if (keyStates['c'] || keyStates['C']) {
         if (player->getIsFlying()) {
-            // 비행 모드: 자유롭게 하강
             glm::vec3 playerPos = player->getPosition();
             glm::vec3 oldPos = playerPos;
             playerPos.y -= cameraSpeed;
@@ -1451,7 +1665,6 @@ void processInput() {
             AABB playerAABB = player->getAABB();
             bool collided = blockManager->checkCollision(playerAABB);
 
-            // 챌린지 모드: 플랫폼 블록과도 충돌 체크
             if (!collided && challengeManager && challengeManager->isChallengeMode()) {
                 collided = challengeManager->checkPlatformCollision(playerAABB);
             }
@@ -1467,16 +1680,36 @@ void processInput() {
 }
 
 void drawScene() {
+    // 메뉴 상태에서는 다른 렌더링
+    if (gameState == GameState::MAIN_MENU || gameState == GameState::CHALLENGE_SELECT) {
+        glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // 스카이박스 렌더링 (배경용)
+        renderSkybox();
+        
+        // 메뉴 UI 렌더링
+        if (gameState == GameState::MAIN_MENU) {
+            renderMainMenu();
+        }
+        else if (gameState == GameState::CHALLENGE_SELECT) {
+            renderChallengeSelectMenu();
+        }
+        
+        glutSwapBuffers();
+        return;
+    }
+    
+    // 게임 플레이 중
     if (!gameStarted) return;
+    
     processInput();
     updateCamera();
 
-    // 챌린지 업데이트 (플레이어 위치 전달)
     if (challengeManager && challengeManager->isChallengeMode()) {
         glm::vec3 playerPos = player ? player->getPosition() : glm::vec3(0.0f);
         challengeManager->update(deltaTime, playerPos);
 
-        // 추락 시 리스폰
         if (playerPos.y < 0 && player) {
             challengeManager->respawnAtCheckpoint(playerPos);
             player->setPosition(playerPos);
@@ -1485,12 +1718,8 @@ void drawScene() {
             std::cout << "Respawning at checkpoint..." << std::endl;
         }
 
-        // ==========================================
-        // 챌린지 성공 감지 및 게임 종료
-        // ==========================================
         if (challengeManager->isChallengeCompleted()) {
             if (!challengeSuccessDisplayed) {
-                // 처음 성공한 순간
                 challengeSuccessDisplayed = true;
                 challengeSuccessTime = 0.0f;
                 std::cout << "\n========================================" << std::endl;
@@ -1503,13 +1732,11 @@ void drawScene() {
                 std::cout << "========================================\n" << std::endl;
             }
             else {
-                // 성공 화면 표시 중
                 challengeSuccessTime += deltaTime;
 
-                // 3초 후 게임 종료
                 if (challengeSuccessTime >= SUCCESS_DISPLAY_DURATION) {
                     std::cout << "Exiting game..." << std::endl;
-                    exit(0);  // 게임 종료
+                    exit(0);
                 }
             }
         }
@@ -1518,7 +1745,6 @@ void drawScene() {
     glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // 스카이박스 먼저 렌더링
     renderSkybox();
 
     glUseProgram(shaderProgramID);
@@ -1535,28 +1761,22 @@ void drawScene() {
     GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos");
     glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
 
-    // 일반 블록 렌더링
     for (const auto& pair : blockManager->getAllBlocks()) {
         const Block& block = pair.second;
         renderCube(block.getPosition(), block.getColor(), block.getType());
     }
 
-    // 챌린지 모드: 플랫폼 블록 렌더링
     if (challengeManager && challengeManager->isChallengeMode()) {
-        // 플랫폼 블록 (고정 블록)
         for (const auto& platformBlock : challengeManager->getPlatformBlocks()) {
             renderCube(platformBlock.position, platformBlock.color, platformBlock.type);
         }
 
-        // 목표 블록 (반투명 또는 외곽선)
         for (const auto& targetBlock : challengeManager->getTargetBlocks()) {
-            // 약간 투명하게 또는 다른 색으로 표시
             glm::vec3 ghostColor = targetBlock.color * 0.5f + glm::vec3(0.3f);
             renderCube(targetBlock.position, ghostColor, targetBlock.type);
         }
     }
 
-    // 플레이어 렌더링
     if (cameraMode == CameraMode::THIRD_PERSON) {
         renderPlayer();
     }
@@ -1585,14 +1805,15 @@ void Reshape(int w, int h) {
     width = w;
     height = h;
     glViewport(0, 0, w, h);
+    
+    // 창 크기 변경 시 메뉴 버튼 위치 업데이트
+    initMenuButtons();
 }
 
 void KeyboardDown(unsigned char key, int x, int y) {
     keyStates[key] = true;
 
-    // ESC 키 - 게임 종료
-    if (key == 27) {  // ESC
-        // 챌린지 완료 또는 실패 시 바로 종료
+    if (key == 27) {
         if (challengeManager && challengeManager->isChallengeMode()) {
             if (challengeManager->isChallengeCompleted() ||
                 challengeManager->isChallengeFailed()) {
@@ -1600,23 +1821,20 @@ void KeyboardDown(unsigned char key, int x, int y) {
                 exit(0);
             }
         }
-        // 일반 종료
         exit(0);
     }
 
-    // ==========================================
-    // 스페이스바 처리: 점프, 더블탭
-    // ==========================================
+    // 게임 플레이 중이 아니면 키 입력 무시
+    if (gameState != GameState::PLAYING) return;
+
     if (key == ' ') {
         if (!spacePressed) {
             spacePressed = true;
             float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 
             if (player) {
-                // 더블탭 체크
                 player->handleSpaceTap(currentTime);
 
-                // 걷기 모드이고 땅에 있으면 점프
                 if (!player->getIsFlying() && player->getIsOnGround()) {
                     player->jump();
                 }
@@ -1624,7 +1842,6 @@ void KeyboardDown(unsigned char key, int x, int y) {
         }
     }
 
-    // F키: 카메라 모드 전환
     if (key == 'f' || key == 'F') {
         if (cameraMode == CameraMode::FIRST_PERSON) {
             cameraMode = CameraMode::THIRD_PERSON;
@@ -1636,14 +1853,12 @@ void KeyboardDown(unsigned char key, int x, int y) {
         }
     }
 
-    // Q키: 통계 표시
     if ((key == 'q' || key == 'Q') && challengeManager && challengeManager->getMode() == GameMode::FREE_BUILD) {
         showStats = !showStats;
         if (showStats) std::cout << "Statistics displayed" << std::endl;
         else std::cout << "Statistics hidden" << std::endl;
     }
 
-    // 1~5 숫자키: 블록 타입 선택
     if (key >= '1' && key <= '5') {
         int index = key - '1';
         selectedBlockType = static_cast<BlockType>(index);
@@ -1655,7 +1870,6 @@ void KeyboardDown(unsigned char key, int x, int y) {
 void KeyboardUp(unsigned char key, int x, int y) {
     keyStates[key] = false;
 
-    // 스페이스바를 떼면 상태 리셋
     if (key == ' ') {
         spacePressed = false;
     }
@@ -1663,7 +1877,15 @@ void KeyboardUp(unsigned char key, int x, int y) {
 
 void Mouse(int button, int state, int x, int y) {
     if (state == GLUT_DOWN) {
-        // 챌린지 모드에서는 블록 배치/제거 금지
+        // 메뉴 상태에서는 메뉴 클릭 처리
+        if (gameState == GameState::MAIN_MENU || gameState == GameState::CHALLENGE_SELECT) {
+            if (button == GLUT_LEFT_BUTTON) {
+                handleMenuClick(x, y);
+            }
+            return;
+        }
+        
+        // 게임 플레이 중
         if (challengeManager && challengeManager->isChallengeMode()) {
             if (button == GLUT_LEFT_BUTTON || button == GLUT_RIGHT_BUTTON) {
                 std::cout << "챌린지 모드에서는 블록을 배치하거나 제거할 수 없습니다!" << std::endl;
@@ -1686,14 +1908,12 @@ void Mouse(int button, int state, int x, int y) {
 
         if (blockManager->raycastBlock(ray, hit, &hitBlock)) {
             if (button == GLUT_LEFT_BUTTON) {
-                // 블록 배치
                 glm::vec3 newPos = hitBlock->getPosition() - hit.normal * Constants::BLOCK_SIZE;
                 bool added = blockManager->addBlock(newPos, selectedBlockType);
                 if (added) blocksPlaced++;
 
             }
             else if (button == GLUT_RIGHT_BUTTON) {
-                // 블록 제거
                 bool removed = blockManager->removeBlock(hitBlock->getPosition());
                 if (removed) blocksDestroyed++;
             }
@@ -1703,6 +1923,9 @@ void Mouse(int button, int state, int x, int y) {
 }
 
 void MouseWheel(int button, int dir, int x, int y) {
+    // 메뉴에서는 마우스 휠 무시
+    if (gameState != GameState::PLAYING) return;
+    
     const int blockTypeCount = 5;
     int currentType = static_cast<int>(selectedBlockType);
     if (dir < 0) {
@@ -1719,6 +1942,14 @@ void MouseWheel(int button, int dir, int x, int y) {
 }
 
 void PassiveMotion(int x, int y) {
+    // 메뉴 상태에서는 호버 처리
+    if (gameState == GameState::MAIN_MENU || gameState == GameState::CHALLENGE_SELECT) {
+        updateMenuHover(x, y);
+        glutPostRedisplay();
+        return;
+    }
+    
+    // 게임 플레이 중 카메라 회전
     if (ignoreNextMouseMove) {
         ignoreNextMouseMove = false;
         return;
@@ -1745,7 +1976,6 @@ void PassiveMotion(int x, int y) {
     glutPostRedisplay();
 }
 
-// 스카이박스 초기화
 void initSkybox() {
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -1774,7 +2004,8 @@ int main(int argc, char** argv) {
     glewExperimental = GL_TRUE;
     glewInit();
     glEnable(GL_DEPTH_TEST);
-    glutSetCursor(GLUT_CURSOR_NONE);
+    // 메뉴에서 시작하므로 커서 보이기
+    glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
     make_vertexShaders();
     make_fragmentShaders();
     shaderProgramID = make_shaderProgram();
@@ -1799,6 +2030,7 @@ int main(int argc, char** argv) {
     blockManager = new BlockManager();
     player = new Player(glm::vec3(0.0f, 15.0f, 0.0f));
     challengeManager = new ChallengeManager();
+    initMenuButtons();
     selectGameMode();
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);

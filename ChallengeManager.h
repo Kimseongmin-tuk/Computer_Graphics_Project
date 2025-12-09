@@ -139,4 +139,4 @@ public:
     float getPreviewRotation() const { return previewRotation; }
 };
 
-#endif // CHALLENGEMANAGER_Hy
+#endif // CHALLENGEMANAGER_H

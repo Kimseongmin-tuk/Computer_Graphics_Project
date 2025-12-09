@@ -1186,11 +1186,6 @@ void renderChallengeSelectMenu() {
         const auto& challenges = challengeManager->getAvailableChallenges();
         float descY = height - 180;
         
-        for (size_t i = 0; i < challenges.size() && i < 3; i++) {
-            std::string desc = challenges[i].description;
-
-            renderText(desc, width / 2 - 200, descY - i * 80);
-        }
     }
     
     // 버튼들 렌더링

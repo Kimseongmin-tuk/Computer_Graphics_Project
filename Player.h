@@ -24,6 +24,18 @@ private:
     float legSwing;
     bool isWalking;
 
+    // 비행 모드 관련 변수
+    bool isFlying;              // 비행 모드 활성화 여부
+    float lastSpaceTapTime;     // 마지막 스페이스바 탭 시간
+    const float doubleTapDelay = 0.3f;  // 더블탭 인식 시간 (0.3초)
+
+    // 점프 관련 변수
+    bool isJumping;             // 점프 중인지 여부
+    bool isOnGround;            // 땅에 닿아있는지 여부
+    float verticalVelocity;     // 수직 속도 (중력/점프)
+    const float jumpForce = 9.0f;       // 점프 힘
+    const float gravity = 32.0f;        // 중력 가속도
+
     // 색상
     glm::vec3 skinColor;
     glm::vec3 shirtColor;
@@ -43,6 +55,23 @@ public:
     void setPitch(float p) { pitch = p; }
 
     void setWalking(bool walking) { isWalking = walking; }
+
+    // 비행 모드 관련
+    bool getIsFlying() const { return isFlying; }
+    void setFlying(bool flying) { isFlying = flying; }
+    void toggleFlying() { isFlying = !isFlying; }
+
+    // 스페이스바 더블탭 처리
+    void handleSpaceTap(float currentTime);
+
+    // 점프 관련
+    bool getIsJumping() const { return isJumping; }
+    bool getIsOnGround() const { return isOnGround; }
+    void setOnGround(bool onGround) { isOnGround = onGround; }
+    void jump();  // 점프 시작
+    void applyGravity(float deltaTime);  // 중력 적용
+    float getVerticalVelocity() const { return verticalVelocity; }
+    void setVerticalVelocity(float velocity) { verticalVelocity = velocity; }
 
     // 충돌 감지용 AABB 반환
     AABB getAABB() const;
